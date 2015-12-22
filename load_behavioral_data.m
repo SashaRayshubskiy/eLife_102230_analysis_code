@@ -6,13 +6,46 @@ function [ bdata ] = load_behavioral_data( datapath, sids )
 
 global slash;
 
+trial_type_cnt = 3;
+
+for i=1:trial_type_cnt
+    bdata_not_sorted(i,1) = {};
+    trial_type_idx_counter(i) = 1;
+end
+
+i=1;
+
 for sid = sids
     files = dir([datapath slash '*_sid_' num2str(sid) '_*.mat'])
 
     for f = 1:length(files)
-        raw_data = load([datapath slash files(f).name]);
+       
+        filename = files(f).name;
+        filename_split = strsplit(filename, '_');
+        trial_type = filename_split(2);
+        sid = filename_split(6);
+        tid = filename_split(8);
         
-            
+        trial_type_idx = -1;
+        if(strcmp(trial_type, 'BothOdor') == 1)
+            trial_type_idx = 1;
+        elseif(strcmp(trial_type, 'LeftOdor') == 1)
+            trial_type_idx = 2;        
+        elseif(strcmp(trial_type, 'RightOdor') == 1)
+            trial_type_idx = 3;
+        else
+            disp(['ERROR: Trial type: ' trial_type ' is not recognized']);
+        end
+        
+        raw_data = load([ datapath slash filename ]);
+        
+        bdata_not_sorted{ trial_type_idx, trial_type_idx_counter(trial_type_idx) } = { sid, tid, raw_data };
+        trial_type_idx_counter(trial_type_idx) = trial_type_idx_counter(trial_type_idx) + 1;
     end  
 end
 
+% Sort 
+for i=1:trial_type_cnt
+    bdata_sorted{i} = sortrows(bdata_not_sorted(i), [1 2]);
+end
+end
