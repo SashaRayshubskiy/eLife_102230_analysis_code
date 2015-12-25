@@ -1,4 +1,4 @@
-function [ bdata ] = load_behavioral_data( datapath, sids )
+function [ b_rawdata, b_metadata ] = load_behavioral_data( datapath, sids )
 
 % bdata = { analysis trial id, { vel_fwd, vel_side, vel_yaw, vel_time}, {frame_clock, stim, meta_time} } 
 % analysis trial id maps 1-to-1 behavior and imaging data for this analysis
@@ -39,13 +39,26 @@ for sid = sids
         
         raw_data = load([ datapath slash filename ]);
         
-        bdata_not_sorted{ trial_type_idx, trial_type_idx_counter(trial_type_idx) } = { sid, tid, raw_data };
-        trial_type_idx_counter(trial_type_idx) = trial_type_idx_counter(trial_type_idx) + 1;
+        bdata_not_sorted{ trial_type_idx }( end+1 ) = { sid, tid, raw_data };
     end  
 end
 
 % Sort 
 for i=1:trial_type_cnt
-    bdata_sorted{i} = sortrows(bdata_not_sorted(i), [1 2]);
+    bdata_sorted{ i } = sortrows( bdata_not_sorted(i), [1 2] );
 end
+
+for i=1:trial_type_cnt
+    cur_trial_cnt = size(bdata_sorted{i},1);
+    cur_raw_data_size = size(bdata_sorted{i}{3},1);
+    
+    cur_bdata = zeros([cur_trial_cnt, cur_raw_data_size], 'double');
+
+    for j=1:cur_trial_cnt
+        cur_bdata(j,:,:) = bdata_sorted{i}{3};
+        b_metadata{i}(j,:) = [ bdata_sorted{i}{1}, bdata_sorted{i}{2} ];
+    end
+    bdata_raw{j} = cur_bdata;
+end
+
 end

@@ -24,4 +24,6 @@ bdata = load_behavioral_data(bdata_path);
 cdata_path = [datapath  slash '2p' slash ];
 cdata = load_imaging_data(cdata_path);
 
+check_behavioral_and_imaging_data_trial_consistency();
+
 %% Display behavioral data
