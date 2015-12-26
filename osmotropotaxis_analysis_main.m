@@ -22,16 +22,16 @@ sid = 4;
 
 % Load behavioral data
 bdata_path = [datapath  slash 'ball' slash ];
-[ b_rawdata, b_time, btrial_metadata ] = load_behavioral_data(sid, bdata_path);
+tic; [ b_rawdata, b_time, btrial_meta ] = load_behavioral_data(sid, bdata_path); toc
 
 % Load imaging data
 cdata_path = [datapath  slash '2p' slash ];
-[ cdata_raw, ctrial_metadata ] = load_imaging_data(sid, cdata_path);
+tic; [ cdata_raw, cdata_meta, ctrial_meta ] = load_imaging_data(sid, cdata_path); toc
 
 % Check that the behavioral and imaging trials match up
-check_bdata_and_cdata_trial_integrity( btrial_metadata, ctrial_metadata );
+check_bdata_and_cdata_trial_integrity( btrial_meta, ctrial_meta );
 
-% 
-[bdata_vel, bdata_meta] = reformat_raw_behavioral_data( b_rawdata );
+% Get behavioral data that is usable for analysis
+[bdata_vel_time, bdata_vel] = reformat_raw_behavioral_data( b_time, b_rawdata );
 
 %% Display behavioral data
