@@ -22,18 +22,18 @@ sid = 7;
 
 % Load behavioral data
 bdata_path = [datapath  slash 'ball' slash ];
-tic; [ b_rawdata, b_time, btrial_meta ] = load_behavioral_data(sid, bdata_path); toc
+tic; [ b_rawdata, b_time, btrial_meta ] = load_natural_odor_daq_data(sid, bdata_path); toc
 
 % Load imaging data
-cdata_path = [datapath  slash '2p' slash ];
-tic; [ cdata_raw, cdata_meta, ctrial_meta ] = load_imaging_data(sid, cdata_path); toc
+%cdata_path = [datapath  slash '2p' slash ];
+%tic; [ cdata_raw, cdata_meta, ctrial_meta ] = load_imaging_data(sid, cdata_path); toc
 
 % Check that the behavioral and imaging trials match up
-check_bdata_and_cdata_trial_integrity( btrial_meta, ctrial_meta );
+%check_bdata_and_cdata_trial_integrity( btrial_meta, ctrial_meta );
 
 % Get behavioral data that is usable for analysis
 
-[bdata_vel_time, bdata_vel] = reformat_raw_behavioral_data( b_time, b_rawdata );
+%[bdata_vel_time, bdata_vel] = reformat_raw_behavioral_data( b_time, b_rawdata );
 
 settings = sensor_settings;
 
@@ -71,7 +71,7 @@ plot(b_time(last_stim), 5.0, 'xr');
 
 %% Analyze frame start and duration times
 
-frame_clocks_for_all = vertcat( squeeze(b_rawdata{ BOTH }(:,:,5)), squeeze(b_rawdata{ LEFT }(:,:,5)), squeeze(b_rawdata{ RIGHT }(:,:,5)) );
+frame_clocks_for_all = vertcat( squeeze(b_rawdata(:,:,5)) );
 
 for i=1:size(frame_clocks_for_all,1)
     cur_frame_clock = squeeze(frame_clocks_for_all(i,:));
@@ -95,7 +95,7 @@ xlabel('Time (s)');
 ylabel('Counts (trials)');
 title('Imaging run duration variability');
 
-saveas(f, [analysis_path '/image_acq_variability.fig']);
+saveas(f, [analysis_path '/image_acq_variability_externally_triggered.fig']);
 
 
 

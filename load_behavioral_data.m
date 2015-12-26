@@ -43,7 +43,7 @@ for sid = sids
         tid = str2num(char(tid_split(1)));
         
         trial_type_idx = -1;
-        if(strcmp(trial_type, 'BothOdor') == 1)
+        if((strcmp(trial_type, 'BothOdor') == 1))
             trial_type_idx = 1;
         elseif(strcmp(trial_type, 'LeftOdor') == 1)
             trial_type_idx = 2;        
