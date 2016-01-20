@@ -4,6 +4,8 @@ aconstants.BOTH = 1;
 aconstants.LEFT = 2;
 aconstants.RIGHT = 3;
 
+aconstants.task_str = {'BothOdor', 'LeftOdor', 'RightOdor'};
+
 aconstants.LEFT_CLR =  rgb('FireBrick');
 aconstants.RIGHT_CLR = rgb('SeaGreen');
 aconstants.BOTH_CLR = rgb('DarkBlue');

@@ -1,4 +1,4 @@
-function [ bdata_raw, bdata_time, trial_metadata ] = load_behavioral_data( sids, datapath )
+function [ bdata_raw, bdata_time, trial_metadata ] = load_behavioral_data( sids, datapath, trial_type_cnt)
 
 % Inputs:
 % sids - array or a single SID of the trials to load
@@ -16,8 +16,6 @@ function [ bdata_raw, bdata_time, trial_metadata ] = load_behavioral_data( sids,
 % session
 
 global slash;
-
-trial_type_cnt = 3;
 
 for i=1:trial_type_cnt
     bdata_not_sorted{i} = [];
@@ -43,7 +41,8 @@ for sid = sids
         tid = str2num(char(tid_split(1)));
         
         trial_type_idx = -1;
-        if((strcmp(trial_type, 'BothOdor') == 1))
+
+        if((strcmp(trial_type, 'BothOdor') == 1) | (strcmp(trial_type, 'NaturalOdor') == 1))
             trial_type_idx = 1;
         elseif(strcmp(trial_type, 'LeftOdor') == 1)
             trial_type_idx = 2;        

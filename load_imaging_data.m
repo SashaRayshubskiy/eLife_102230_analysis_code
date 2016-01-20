@@ -1,11 +1,11 @@
-function [ cdata_raw, cdata_meta, trial_metadata ] = load_imaging_data( sids, datapath )
+function [ cdata_raw, cdata_meta, trial_metadata ] = load_imaging_data( sids, datapath, trial_type_cnt )
 
 % Inputs:
 % sids - array or a single SID of the trials to load
 % Path to data directory for desired experiment 
 
 % Outputs:
-% cdata_raw = { trial_type } [ analysis trial id, number of samples, daq channel }
+% cdata_raw = { trial_type } [ analysis trial id, Lines, Pixels, Channels, Planes, Volumes ]
 % 
 % cdata_meta.frame_rate = frames_per_second
 % cdata_meta.volume_rate = volumes per second
@@ -19,8 +19,6 @@ function [ cdata_raw, cdata_meta, trial_metadata ] = load_imaging_data( sids, da
 % session
 
 global slash;
-
-trial_type_cnt = 3;
 
 for i=1:trial_type_cnt
     cdata_not_sorted{i} = [];
@@ -37,15 +35,15 @@ for sid = sids
        
         filename = files(f).name;
         filename_split = strsplit(filename, '_');
-        trial_type = filename_split(1);
+        trial_type = filename_split(2);
         
-        sid = str2num(char(filename_split(3)));
+        sid = str2num(char(filename_split(6)));
         
-        tid_str = filename_split(5);
+        tid_str = filename_split(8);
         tid = str2num(char(tid_str));
         
         trial_type_idx = -1;
-        if(strcmp(trial_type, 'BothOdor') == 1)
+        if((strcmp(trial_type, 'BothOdor') == 1) | (strcmp(trial_type, 'NaturalOdor') == 1))
             trial_type_idx = 1;
         elseif(strcmp(trial_type, 'LeftOdor') == 1)
             trial_type_idx = 2;        

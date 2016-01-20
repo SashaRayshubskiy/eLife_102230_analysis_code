@@ -13,6 +13,7 @@ f = figure;
 subplot(3,1,1);
 hold on;
 
+total_trial_cnt = size(bdata_vel{ac.LEFT},1) + size(bdata_vel{ac.RIGHT},1) + size(bdata_vel{ac.BOTH},1);
 mean_left_vel_fwd = squeeze(mean(bdata_vel{ac.LEFT}(:,ac.VEL_FWD,:)));
 mean_right_vel_fwd = squeeze(mean(bdata_vel{ac.RIGHT}(:,ac.VEL_FWD,:)));
 mean_both_vel_fwd = squeeze(mean(bdata_vel{ac.BOTH}(:,ac.VEL_FWD,:)));
@@ -50,7 +51,7 @@ set(hh, 'EdgeColor', 'None');
 xlim([0, bdata_vel_time(end)]);
 xlabel('Time (s)');
 ylabel('Velocity (au/s)');
-title('Forward velocity');
+title(['Forward velocity. Trial count: ' num2str(total_trial_cnt)]);
 
 subplot(3,1,2);
 hold on;
