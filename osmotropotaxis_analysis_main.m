@@ -10,7 +10,8 @@ else
 end
 
 % Must end with a slash
-datapath = '/data/drive_fast/sasha/160118_R84C10_83blexA_02/';
+%datapath = '/data/drive_fast/sasha/160118_R84C10_83blexA_02/';
+datapath = '/data/drive_fast/sasha/160122_nsyb_83blexA_01/';
 
 analysis_path = [datapath slash 'analysis'];
 
@@ -38,29 +39,49 @@ check_bdata_and_cdata_trial_integrity( btrial_meta, ctrial_meta );
 [bdata_vel_time, bdata_vel] = reformat_raw_behavioral_data( b_time, b_rawdata );
 
 settings = sensor_settings;
+global file_writer_cnt;
+file_writer_cnt = 1;
+
+%% Save imaging data for faster load
+save
 
 %% Display individual trials. Behavior along with gcamp.
 a_const = get_analysis_constants;
 
-cur_trial_type = a_const.BOTH;
+cur_trial_type = a_const.RIGHT;
 cur_trial_type_str = a_const.task_str{cur_trial_type};
-trial_id = 1;
+trial_id = 4;
 
-cur_cdata     = squeeze(cdata_raw{ a_const.BOTH }(trial_id,:,:,:,:,:));
-cur_bdata_vel = squeeze(bdata_vel{ a_const.BOTH }(trial_id,:,:));
+cur_cdata     = squeeze(cdata_raw{ cur_trial_type }(trial_id,:,:,:,:,:));
+cur_bdata_vel = squeeze(bdata_vel{ cur_trial_type }(trial_id,:,:));
 
 figsave_prefix = [analysis_path '/clicky_with_behaviour_' cur_trial_type_str '_tid_' num2str(trial_id) ];
 display_avg_volume(cur_cdata, figsave_prefix);
 
-cur_plane = 8;
+cur_plane = 8;  
 
 cur_plane_cdata = squeeze(cur_cdata(:,:,cur_plane,:));
 
 figsave_prefix = [analysis_path '/clicky_with_behaviour_' cur_trial_type_str '_tid_' num2str(trial_id) '_plane_' num2str(cur_plane) ];
-clicky_with_behaviour( cur_plane_cdata, cur_bdata_vel, VPS, settings, figsave_prefix );
+
+VPS = cdata_meta.volume_rate;
+clicky_with_behaviour( cur_plane_cdata, cur_bdata_vel, bdata_vel_time, VPS, settings, figsave_prefix );
 
 %% Display behavioral data
 display_avg_velocity(b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
+
+%% Play movie on a trial
+a_const = get_analysis_constants;
+
+cur_trial_type = a_const.RIGHT;
+cur_trial_type_str = a_const.task_str{cur_trial_type};
+trial_id = 4;
+
+cur_cdata     = squeeze(cdata_raw{ cur_trial_type }(trial_id,:,:,:,:,:));
+VPS = cdata_meta.volume_rate;
+
+figsave_prefix = [analysis_path '/mov_' cur_trial_type_str '_tid_' num2str(trial_id) ];
+play_volumetric_movie(cur_cdata, VPS, figsave_prefix);
 
 %% Play with stim params
 one_trial_bdata = squeeze(b_rawdata{ BOTH }(1,:,:));
@@ -119,6 +140,5 @@ title('Imaging run duration variability');
 
 saveas(f, [analysis_path '/image_acq_variability.fig']);
 
-
-
+%% 
 

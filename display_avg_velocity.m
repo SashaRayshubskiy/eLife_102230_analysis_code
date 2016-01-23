@@ -8,7 +8,7 @@ left_odor_stim  = squeeze(one_trial_bdata(:,7));
 first_stim = find((left_odor_stim > 2.0), 1, 'first') ./ settings.sampRate;
 last_stim = find((left_odor_stim > 2.0), 1, 'last') ./ settings.sampRate;
 
-f = figure; 
+f = figure('units','normalized','outerposition',[0 0 1 1]);
 
 subplot(3,1,1);
 hold on;
@@ -40,10 +40,12 @@ set(fh, 'EdgeColor', 'None');
 p1 = plot(bdata_vel_time, mean_left_vel_fwd, 'color', ac.LEFT_CLR);
 p2 = plot(bdata_vel_time, mean_right_vel_fwd, 'color', ac.RIGHT_CLR);
 p3 = plot(bdata_vel_time, mean_both_vel_fwd, 'color', ac.BOTH_CLR);
+ylim([-0.01 0.05]);
+
 legend([p1,p2,p3], 'Left Odor w/ SEM', 'Right Odor w/ SEM', 'Both Odor w/ SEM');
 
 yy = ylim;
-y_min = yy(1)-yy(1)*0.01; y_max = yy(2);
+y_min = yy(1); y_max = yy(2);
 hh = fill([ first_stim first_stim last_stim last_stim ],[y_min y_max y_max y_min ], rgb('Wheat'));
 set(gca,'children',circshift(get(gca,'children'),-1));
 set(hh, 'EdgeColor', 'None');
@@ -82,9 +84,10 @@ set(fh, 'EdgeColor', 'None');
 p1 = plot(bdata_vel_time, mean_left_vel_side, 'color', ac.LEFT_CLR);
 p2 = plot(bdata_vel_time, mean_right_vel_side, 'color', ac.RIGHT_CLR);
 p3 = plot(bdata_vel_time, mean_both_vel_side, 'color', ac.BOTH_CLR);
+ylim([-0.02 0.02]);
 
 yy = ylim;
-y_min = yy(1)-yy(1)*0.01; y_max = yy(2);
+y_min = yy(1); y_max = yy(2);
 hh = fill([ first_stim first_stim last_stim last_stim ],[y_min y_max y_max y_min ], rgb('Wheat'));
 set(gca,'children',circshift(get(gca,'children'),-1));
 set(hh, 'EdgeColor', 'None');
@@ -123,19 +126,22 @@ set(fh, 'EdgeColor', 'None');
 p1 = plot(bdata_vel_time, mean_left_vel_yaw, 'color', ac.LEFT_CLR);
 p2 = plot(bdata_vel_time, mean_right_vel_yaw, 'color', ac.RIGHT_CLR);
 p3 = plot(bdata_vel_time, mean_both_vel_yaw, 'color', ac.BOTH_CLR);
-
-yy = ylim;
-y_min = yy(1)-yy(1)*0.01; y_max = yy(2);
-hh = fill([ first_stim first_stim last_stim last_stim ],[y_min y_max y_max y_min ], rgb('Wheat'));
-set(gca,'children',circshift(get(gca,'children'),-1));
-set(hh, 'EdgeColor', 'None');
+ylim([-0.1 0.1]);
 
 xlim([0, bdata_vel_time(end)]);
 xlabel('Time (s)');
 ylabel('Velocity (au/s)');
 title('Yaw velocity');
 
+yy = ylim;
+y_min = yy(1); y_max = yy(2);
+hh = fill([ first_stim first_stim last_stim last_stim ],[y_min y_max y_max y_min ], rgb('Wheat'));
+set(gca,'children',circshift(get(gca,'children'),-1));
+set(hh, 'EdgeColor', 'None');
+
+
 saveas(f, [analysis_path '/avg_velocity.fig']);
+saveas(f, [analysis_path '/avg_velocity.png']);
 
 end
 
