@@ -1,4 +1,4 @@
-function [ output_args ] = display_avg_velocity( bdata_raw, bdata_vel, bdata_vel_time, analysis_path )
+function [ output_args ] = display_avg_velocity( sid, bdata_raw, bdata_vel, bdata_vel_time, analysis_path )
 
 ac = get_analysis_constants;
 settings = sensor_settings;
@@ -140,8 +140,8 @@ set(gca,'children',circshift(get(gca,'children'),-1));
 set(hh, 'EdgeColor', 'None');
 
 
-saveas(f, [analysis_path '/avg_velocity.fig']);
-saveas(f, [analysis_path '/avg_velocity.png']);
+saveas(f, [analysis_path '/avg_velocity_sid_' num2str( sid ) '.fig']);
+saveas(f, [analysis_path '/avg_velocity_sid_' num2str( sid ) '.png']);
 
 end
 

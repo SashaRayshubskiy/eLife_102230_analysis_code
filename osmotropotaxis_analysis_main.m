@@ -21,7 +21,8 @@ end
 
 sid = 0;
 
-trial_type_cnt = 3;
+aconstants = get_analysis_constants;
+trial_type_cnt = aconstants.TRIAL_TYPE_CNT;
 
 % Load behavioral data
 bdata_path = [datapath  slash 'ball' slash ];
@@ -42,8 +43,36 @@ settings = sensor_settings;
 global file_writer_cnt;
 file_writer_cnt = 1;
 
-%% Save imaging data for faster load
-save
+%% Temporary test space 
+a_const = get_analysis_constants;
+
+cur_trial_type = a_const.RIGHT;
+cur_trial_type_str = a_const.task_str{cur_trial_type};
+trial_ord = 4;
+
+cur_cdata     = squeeze(cdata_raw{ cur_trial_type }(trial_ord,:,:,:,:,:));
+rois_v2 = get_rois_from_volume_v2(cur_cdata);
+
+cur_trial_id = squeeze(btrial_meta{ cur_trial_type }(trial_ord, 2));
+
+cur_tbt_filename_prefix = [ analysis_path '/roi_avg_volume_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
+generate_volume_avg_with_rois( cur_cdata, new_rois, cur_tbt_filename_prefix );
+
+%%
+VPS = cdata_meta.volume_rate;
+cur_bdata_vel = squeeze(bdata_vel{ cur_trial_type }(trial_ord,:,:));
+cur_tbt_filename_prefix = [ analysis_path '/time_courses_in_volume_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
+generate_volume_time_courses_with_rois( cur_cdata, cur_bdata_vel, bdata_vel_time, new_rois, VPS, cur_tbt_filename_prefix );
+
+%% 
+plane_to_append = 5;
+new_rois = add_rois_from_volume(cur_cdata, rois_v2, plane_to_append);
+
+%% 
+asid = 1; % analysis session id
+
+VPS = cdata_meta.volume_rate;
+tic; generate_trial_by_trial_composite_behaviour_and_calcium_panels( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, analysis_path, new_rois ); toc;
 
 %% Display individual trials. Behavior along with gcamp.
 a_const = get_analysis_constants;
@@ -68,7 +97,7 @@ VPS = cdata_meta.volume_rate;
 clicky_with_behaviour( cur_plane_cdata, cur_bdata_vel, bdata_vel_time, VPS, settings, figsave_prefix );
 
 %% Display behavioral data
-display_avg_velocity(b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
+display_avg_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
 
 %% Play movie on a trial
 a_const = get_analysis_constants;
@@ -140,5 +169,12 @@ title('Imaging run duration variability');
 
 saveas(f, [analysis_path '/image_acq_variability.fig']);
 
-%% 
+%% Save imaging data for faster load
+datamat_path = [datapath slash 'data_mat'];
 
+if(~exist(datamat_path, 'dir'))
+    mkdir( datamat_path );
+end
+
+cdata_mat_path = [datamat_path '/cdata_all.mat'];
+tic; savefast(cdata_mat_path, 'cdata_raw', 'cdata_meta', 'ctrial_meta'); toc

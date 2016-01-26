@@ -88,6 +88,8 @@ for i=1:trial_type_cnt
         end
                
         cur_bdata( j, :, : ) = bdata_not_sorted_helper{i}{rid,2}.trial_bdata;
+        
+        % [sid, tid]
         trial_metadata{ i }( j, : ) = bdata_sorted{i}(j,1:2);
     end
     
