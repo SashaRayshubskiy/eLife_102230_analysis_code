@@ -1,4 +1,4 @@
-function generate_volume_time_courses_with_rois( trial_cdata, trial_bdata_vel, bdata_vel_time, rois, VPS, filename_prefix )
+function generate_two_behavioral_condition_compare_avg_traces( atid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, filename_prefix, new_rois )
 
 ac = get_analysis_constants;
 settings = sensor_settings;

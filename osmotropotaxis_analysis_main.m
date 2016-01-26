@@ -11,7 +11,7 @@ end
 
 % Must end with a slash
 %datapath = '/data/drive_fast/sasha/160118_R84C10_83blexA_02/';
-datapath = '/data/drive_fast/sasha/160122_nsyb_83blexA_01/';
+datapath = '/data/drive_fast/sasha/160125_nsyb_83blexA_02/';
 
 analysis_path = [datapath slash 'analysis'];
 
@@ -19,7 +19,7 @@ if(~exist(analysis_path, 'dir'))
     mkdir(analysis_path);
 end
 
-sid = 0;
+sid = 1;
 
 aconstants = get_analysis_constants;
 trial_type_cnt = aconstants.TRIAL_TYPE_CNT;
@@ -42,6 +42,25 @@ check_bdata_and_cdata_trial_integrity( btrial_meta, ctrial_meta );
 settings = sensor_settings;
 global file_writer_cnt;
 file_writer_cnt = 1;
+
+%% Generate average traces
+avg_trace_filepath = [ analysis_path '/avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+
+% stopped then moving
+% moving then stopped
+
+%condition_trials = { expected_turning_trials, ignoring_stim_trials };
+%condition_trials_str = {'expected_turning', 'ignoring_stim' };
+
+[condition_trials, condition_trials_str] = generate_expected_vs_ignore_trial_list( bdata_vel_time, bdata_vel );
+
+display_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel );
+
+%[condition_trials, condition_trials_str] = generate_stationary_to_motion_on_stim_vs_constant_motion_trial_list( bdata_vel_time, bdata_vel );
+
+tic; [ btraces_per_condition, ctraces_in_roi_per_condition ] = collect_two_behavioral_condition_traces( condition_trials, cdata_raw, bdata_vel, new_rois ); toc;
+
+display_two_behavioral_condition_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, avg_trace_filepath );
 
 %% Temporary test space 
 a_const = get_analysis_constants;
@@ -72,7 +91,8 @@ new_rois = add_rois_from_volume(cur_cdata, rois_v2, plane_to_append);
 asid = 1; % analysis session id
 
 VPS = cdata_meta.volume_rate;
-tic; generate_trial_by_trial_composite_behaviour_and_calcium_panels( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, analysis_path, new_rois ); toc;
+%tic; generate_trial_by_trial_composite_behaviour_and_calcium_panels( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, analysis_path, new_rois ); toc;
+tic; generate_trial_by_trial_composite_behaviour_and_calcium_panels( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, analysis_path ); toc;
 
 %% Display individual trials. Behavior along with gcamp.
 a_const = get_analysis_constants;
