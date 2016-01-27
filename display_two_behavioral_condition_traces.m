@@ -23,13 +23,14 @@ total_time = prestim + stim + poststim;
 
 first_stim_t = prestim;
 last_stim_t = stim + prestim;
+nframes = size(ctraces_in_roi_per_condition{1,1,1}, 3);
 
 t = [1:nframes]./VPS;
 
 for trial_type = 1:size( btraces_per_condition, 2 )
         
     f = figure('units','normalized','outerposition',[0 0 1 1]);
-    
+        
     for cond_ord = 1:size( btraces_per_condition, 1 )
         
         if(cond_ord == 1)
@@ -43,12 +44,15 @@ for trial_type = 1:size( btraces_per_condition, 2 )
             
             colorindex = 0;
             
-            for roi_id = 1:size(ctraces_in_roi_per_condition, 4)
+            cur_plane_data = ctraces_in_roi_per_condition{ cond_ord, trial_type, p };
+            
+            for roi_id = 1:size(cur_plane_data, 2);
                 hold on;
                 currcolor = order(1+mod(colorindex,size(order,1)),:);
-                avg_trace = mean(squeeze(ctraces_in_roi_per_condition(cond_ord, trial_type, :, roi_id, :)));
+
+                avg_trace = mean(squeeze(cur_plane_data(:,roi_id,:)));
                 
-                plot( t, avg_trace, 'color', currcolor, 'LineSpec', cur_cond_symbol );
+                plot( t, avg_trace, 'color', currcolor, 'LineStyle', cur_cond_symbol );
                 colorindex = colorindex + 1;
             end
             
@@ -68,7 +72,7 @@ for trial_type = 1:size( btraces_per_condition, 2 )
             set(gca, 'XTickLabel', '');
             
             if( p == 2 )
-                tt = title(filename_prefix);
+                tt = title(ac.task_str(trial_type));
                 set(tt, 'Interpreter', 'none')
             end
             drawnow;
@@ -80,16 +84,18 @@ for trial_type = 1:size( btraces_per_condition, 2 )
             subaxis(IMAGE_ROWS+1, IMAGE_COLS, PLANES + c, 'Spacing', SPACING, 'Padding', PADDING, 'Margin', MARGIN);
             
             hold on;
-            avg_trace_fwd = mean(squeeze(btraces_per_condition( cond_ord, trial_type, :, ac.VEL_FWD, : )));
-            avg_trace_yaw = mean(squeeze(btraces_per_condition( cond_ord, trial_type, :, ac.VEL_YAW, : )));
+            %avg_trace_fwd = mean(squeeze(btraces_per_condition{ cond_ord, trial_type }( :, ac.VEL_FWD, : )));
+            avg_trace_yaw = mean(squeeze(btraces_per_condition{ cond_ord, trial_type }( :, ac.VEL_YAW, : )));
             
-            phdl(cond_ord, 1) = plot( bdata_vel_time, avg_trace_fwd, 'color', rgb('FireBrick'), 'LineSpec', cur_cond_symbol );
-            phdl(cond_ord, 2) = plot( bdata_vel_time, avg_trace_yaw, 'color', rgb('SeaGreen'), 'LineSpec', cur_cond_symbol );
+            %phdl(cond_ord, 1) = plot( bdata_vel_time, avg_trace_fwd, 'color', rgb('FireBrick'), 'LineStyle', cur_cond_symbol );
+            phdl(cond_ord) = plot( bdata_vel_time, avg_trace_yaw, 'color', rgb('SeaGreen'), 'LineStyle', cur_cond_symbol );
+            
+            cond_num_trials(cond_ord) = size( btraces_per_condition{ cond_ord, trial_type }( :, ac.VEL_YAW, : ), 1 );
             
             if( ( c == 1 ) & ( cond_ord == 2 ))
-                legend( [ phdl(1,1), phdl(2,1), phdl(1,2), phdl(2,2) ], ... 
-                        ['Vel fwd - ' condition_trials_str(1)], ['Vel yaw - ' condition_trials_str(1)], ...
-                        ['Vel fwd - ' condition_trials_str(2)], ['Vel yaw - ' condition_trials_str(2)] );
+                legend( [ phdl(1), phdl(2) ], ... 
+                        [ condition_trials_str{ 1 } '(' num2str( cond_num_trials( 1 ) ) ')'], ...
+                        [ condition_trials_str{ 2 } '(' num2str( cond_num_trials( 2 ) ) ')'] );
             end
             
             yy = ylim;
@@ -101,7 +107,7 @@ for trial_type = 1:size( btraces_per_condition, 2 )
             xlim([0, total_time]);
             xlabel('Time (s)');
             if( c == 1 )
-                ylabel('Velocity (au/s)');
+                ylabel('Yaw velocity (au/s)');
             else
                 set(gca, 'YTickLabel', '');
             end
@@ -110,8 +116,8 @@ for trial_type = 1:size( btraces_per_condition, 2 )
         end
     end
         
-    saveas(f, [ filename_prefix '.fig']);
-    saveas(f, [ filename_prefix '.png']);
+    saveas(f, [ filename_prefix '_' ac.task_str{trial_type} '.fig']);
+    saveas(f, [ filename_prefix '_' ac.task_str{trial_type} '.png']);
     % close(f);
 end
 

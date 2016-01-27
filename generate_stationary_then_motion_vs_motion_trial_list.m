@@ -3,7 +3,7 @@ function [ condition_trials, condition_trials_str, condition_str ] = generate_ex
 
 ac = get_analysis_constants;
 settings = sensor_settings;
-
+generate_expected_vs_ignore_trial_list
 prestim = settings.pre_stim;
 stim    = settings.stim;
 poststim    = settings.post_stim;

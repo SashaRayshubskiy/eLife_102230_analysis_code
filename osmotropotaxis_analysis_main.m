@@ -43,6 +43,9 @@ settings = sensor_settings;
 global file_writer_cnt;
 file_writer_cnt = 1;
 
+% Create the reverse mapping from 
+external_trial_id_to_internal_ordinal_map = get_external_trial_id_to_internal_ordinal_map(btrial_meta);
+
 %% Generate average traces
 avg_trace_filepath = [ analysis_path '/avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 
@@ -52,15 +55,25 @@ avg_trace_filepath = [ analysis_path '/avg_traces_asid_' num2str( asid ) '_sid_'
 %condition_trials = { expected_turning_trials, ignoring_stim_trials };
 %condition_trials_str = {'expected_turning', 'ignoring_stim' };
 
-[condition_trials, condition_trials_str] = generate_expected_vs_ignore_trial_list( bdata_vel_time, bdata_vel );
+[ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list( bdata_vel_time, bdata_vel );
 
-display_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel );
+avg_cond_btrace_trace_filepath = [ analysis_path '/' condition_str '_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+with_single_trials = 1;
+display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
+with_single_trials = 0;
+display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
 
 %[condition_trials, condition_trials_str] = generate_stationary_to_motion_on_stim_vs_constant_motion_trial_list( bdata_vel_time, bdata_vel );
+nsyb_83blexA_01_blank_trials = { [165], [163, 164, 167, 359], [166, 360] };
+trial_exclusion_list = nsyb_83blexA_01_blank_trials;
 
-tic; [ btraces_per_condition, ctraces_in_roi_per_condition ] = collect_two_behavioral_condition_traces( condition_trials, cdata_raw, bdata_vel, new_rois ); toc;
+tic; [ btraces_per_condition, ctraces_in_roi_per_condition ] = collect_two_behavioral_condition_traces( condition_trials, cdata_raw, bdata_vel, VPS, new_rois, trial_exclusion_list, btrial_meta ); toc;
 
+avg_trace_filepath = [ analysis_path '/' condition_str '_avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 display_two_behavioral_condition_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, avg_trace_filepath );
+
+diff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, avg_trace_filepath );
 
 %% Temporary test space 
 a_const = get_analysis_constants;
