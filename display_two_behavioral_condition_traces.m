@@ -41,7 +41,7 @@ for trial_type = 1:size( btraces_per_condition, 2 )
         
         for p=1:PLANES
             subaxis( IMAGE_ROWS+1, IMAGE_COLS, p, 'Spacing', SPACING, 'Padding', PADDING, 'Margin', MARGIN );
-            
+            1
             colorindex = 0;
             
             cur_plane_data = ctraces_in_roi_per_condition{ cond_ord, trial_type, p };
@@ -54,6 +54,14 @@ for trial_type = 1:size( btraces_per_condition, 2 )
                 
                 plot( t, avg_trace, 'color', currcolor, 'LineStyle', cur_cond_symbol );
                 colorindex = colorindex + 1;
+            end
+            
+            if(p>=1 & p<=8 )
+                ylim([ -0.2 1.2 ]);
+            elseif (p>=9 & p<=12 )
+                ylim([ -0.2 0.8 ]);
+            elseif (p>=13 & p<=16 )
+                ylim([ -0.2 0.4 ]);
             end
             
             yy = ylim;
@@ -93,9 +101,10 @@ for trial_type = 1:size( btraces_per_condition, 2 )
             cond_num_trials(cond_ord) = size( btraces_per_condition{ cond_ord, trial_type }( :, ac.VEL_YAW, : ), 1 );
             
             if( ( c == 1 ) & ( cond_ord == 2 ))
-                legend( [ phdl(1), phdl(2) ], ... 
+                ll = legend( [ phdl(1), phdl(2) ], ... 
                         [ condition_trials_str{ 1 } '(' num2str( cond_num_trials( 1 ) ) ')'], ...
                         [ condition_trials_str{ 2 } '(' num2str( cond_num_trials( 2 ) ) ')'] );
+                set(ll, 'Interpreter', 'none')
             end
             
             yy = ylim;

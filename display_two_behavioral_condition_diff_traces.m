@@ -39,7 +39,7 @@ for trial_type = 1:size( btraces_per_condition, 2 )
         cur_plane_data_cond_1 = ctraces_in_roi_per_condition{ 1, trial_type, p };
         cur_plane_data_cond_2 = ctraces_in_roi_per_condition{ 2, trial_type, p };
         
-        for roi_id = 1:size(cur_plane_data, 2);
+        for roi_id = 1:size(cur_plane_data_cond_1, 2);
             hold on;
             currcolor = order(1+mod(colorindex,size(order,1)),:);
             
@@ -50,6 +50,17 @@ for trial_type = 1:size( btraces_per_condition, 2 )
             colorindex = colorindex + 1;
         end
         
+        min_ylim = -0.3;
+        max_ylim = 0.35;
+        
+        if(p>=1 & p<=8 )
+            ylim([ min_ylim max_ylim ]);
+        elseif (p>=9 & p<=12 )
+            ylim([ min_ylim max_ylim ]);
+        elseif (p>=13 & p<=16 )
+            ylim([ min_ylim max_ylim ]);
+        end            
+        
         yy = ylim;
         y_min = yy(1)-yy(1)*0.01; y_max = yy(2);
         hh = fill([ first_stim_t first_stim_t last_stim_t last_stim_t ],[y_min y_max y_max y_min ], rgb('Wheat'));
@@ -58,7 +69,7 @@ for trial_type = 1:size( btraces_per_condition, 2 )
         
         xlim([0, total_time]);
         if(mod((p-1),4) == 0 )
-            ylabel('dF/F');
+            ylabel('diff dF/F');
         else
             set(gca, 'YTickLabel', '');
         end
@@ -78,15 +89,18 @@ for trial_type = 1:size( btraces_per_condition, 2 )
         subaxis(IMAGE_ROWS+1, IMAGE_COLS, PLANES + c, 'Spacing', SPACING, 'Padding', PADDING, 'Margin', MARGIN);
         
         hold on;
-        %avg_trace_fwd = mean(squeeze(btraces_per_condition{ cond_ord, trial_type }( :, ac.VEL_FWD, : )));
-        avg_trace_yaw = mean(squeeze(btraces_per_condition{ cond_ord, trial_type }( :, ac.VEL_YAW, : )));
+
+        avg_trace_yaw_cond_1 = mean(squeeze(btraces_per_condition{ 1, trial_type }( :, ac.VEL_YAW, : )));
+        avg_trace_yaw_cond_2 = mean(squeeze(btraces_per_condition{ 2, trial_type }( :, ac.VEL_YAW, : )));
         
         %phdl(cond_ord, 1) = plot( bdata_vel_time, avg_trace_fwd, 'color', rgb('FireBrick'), 'LineStyle', cur_cond_symbol );
-        phdl(cond_ord) = plot( bdata_vel_time, avg_trace_yaw, 'color', rgb('SeaGreen'), 'LineStyle', cur_cond_symbol );
+        phdl(1) = plot( bdata_vel_time, avg_trace_yaw_cond_1, 'color', rgb('SeaGreen'), 'LineStyle', '-' );
+        phdl(2) = plot( bdata_vel_time, avg_trace_yaw_cond_2, 'color', rgb('SeaGreen'), 'LineStyle', '--' );
         
-        cond_num_trials(cond_ord) = size( btraces_per_condition{ cond_ord, trial_type }( :, ac.VEL_YAW, : ), 1 );
+        cond_num_trials( 1 ) = size( btraces_per_condition{ 1, trial_type }( :, ac.VEL_YAW, : ), 1 );
+        cond_num_trials( 2 ) = size( btraces_per_condition{ 2, trial_type }( :, ac.VEL_YAW, : ), 1 );
         
-        if( ( c == 1 ) & ( cond_ord == 2 ))
+        if( c == 1 )
             ll = legend( [ phdl(1), phdl(2) ], ...
                 [ condition_trials_str{ 1 } '(' num2str( cond_num_trials( 1 ) ) ')'], ...
                 [ condition_trials_str{ 2 } '(' num2str( cond_num_trials( 2 ) ) ')'] );

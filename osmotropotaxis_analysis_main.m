@@ -11,7 +11,9 @@ end
 
 % Must end with a slash
 %datapath = '/data/drive_fast/sasha/160118_R84C10_83blexA_02/';
-datapath = '/data/drive_fast/sasha/160125_nsyb_83blexA_02/';
+%datapath = '/data/drive_fast/sasha/160125_nsyb_83blexA_02/';
+datapath = '/data/drive_fast/sasha/160122_nsyb_83blexA_01/';
+%datapath = '/data/drive0/sasha/160128_nsyb_83blexA_05/';
 
 analysis_path = [datapath slash 'analysis'];
 
@@ -19,7 +21,7 @@ if(~exist(analysis_path, 'dir'))
     mkdir(analysis_path);
 end
 
-sid = 1;
+sid = 0;
 
 aconstants = get_analysis_constants;
 trial_type_cnt = aconstants.TRIAL_TYPE_CNT;
@@ -46,20 +48,21 @@ file_writer_cnt = 1;
 % Create the reverse mapping from 
 external_trial_id_to_internal_ordinal_map = get_external_trial_id_to_internal_ordinal_map(btrial_meta);
 
-%% Generate average traces
+%% Generate expected vs. ignored
 avg_trace_filepath = [ analysis_path '/avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
-
-% stopped then moving
-% moving then stopped
-
-%condition_trials = { expected_turning_trials, ignoring_stim_trials };
-%condition_trials_str = {'expected_turning', 'ignoring_stim' };
 
 [ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list( bdata_vel_time, bdata_vel );
 
+%% Generate stationary vs. motion
+avg_trace_filepath = [ analysis_path '/avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+
+[ condition_trials, condition_trials_str, condition_str ] = generate_stationary_then_motion_vs_motion_trial_list_for_160122_nsyb_83blexA_01( bdata_vel_time, bdata_vel, external_trial_id_to_internal_ordinal_map );
+
+%%
 avg_cond_btrace_trace_filepath = [ analysis_path '/' condition_str '_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 with_single_trials = 1;
 display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
+
 with_single_trials = 0;
 display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
 
@@ -67,22 +70,28 @@ display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_
 nsyb_83blexA_01_blank_trials = { [165], [163, 164, 167, 359], [166, 360] };
 trial_exclusion_list = nsyb_83blexA_01_blank_trials;
 
-tic; [ btraces_per_condition, ctraces_in_roi_per_condition ] = collect_two_behavioral_condition_traces( condition_trials, cdata_raw, bdata_vel, VPS, new_rois, trial_exclusion_list, btrial_meta ); toc;
+rois = get_rois_from_volume_v2( asid, squeeze(cdata_raw{ 1 }(1,:,:,:,:,:)), analysis_path );
+
+tic; [ btraces_per_condition, ctraces_in_roi_per_condition ] = collect_two_behavioral_condition_traces( condition_trials, cdata_raw, bdata_vel, VPS, rois, trial_exclusion_list, btrial_meta ); toc;
 
 avg_trace_filepath = [ analysis_path '/' condition_str '_avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 display_two_behavioral_condition_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, avg_trace_filepath );
 
 diff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
-display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, avg_trace_filepath );
+display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, diff_avg_trace_filepath );
 
 %% Temporary test space 
 a_const = get_analysis_constants;
-
+display_two_behavioral_condition_traces
 cur_trial_type = a_const.RIGHT;
-cur_trial_type_str = a_const.task_str{cur_trial_type};
+cur_trial_type_str = a_const.task_str{cur_trial_type};diff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, diff_avg_trace_filepath );
+
 trial_ord = 4;
 
-cur_cdata     = squeeze(cdata_raw{ cur_trial_type }(trial_ord,:,:,:,:,:));
+cur_cdata     = sqdiff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, avg_trace_filepath );
+% ueeze(cdata_raw{ cur_trial_type }(trial_ord,:,:,:,:,:));
 rois_v2 = get_rois_from_volume_v2(cur_cdata);
 
 cur_trial_id = squeeze(btrial_meta{ cur_trial_type }(trial_ord, 2));
@@ -101,11 +110,13 @@ plane_to_append = 5;
 new_rois = add_rois_from_volume(cur_cdata, rois_v2, plane_to_append);
 
 %% 
-asid = 1; % analysis session id
+asid = 0; % roi analysis session id
+
+rois = get_rois_from_volume_v2( asid, squeeze(cdata_raw{ 1 }(1,:,:,:,:,:)), analysis_path );
 
 VPS = cdata_meta.volume_rate;
 %tic; generate_trial_by_trial_composite_behaviour_and_calcium_panels( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, analysis_path, new_rois ); toc;
-tic; generate_trial_by_trial_composite_behaviour_and_calcium_panels( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, analysis_path ); toc;
+tic; generate_trial_by_trial_composite_behaviour_and_calcium_panels( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, analysis_path, rois ); toc;
 
 %% Display individual trials. Behavior along with gcamp.
 a_const = get_analysis_constants;
@@ -131,7 +142,7 @@ clicky_with_behaviour( cur_plane_cdata, cur_bdata_vel, bdata_vel_time, VPS, sett
 
 %% Display behavioral data
 display_avg_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
-
+cd 
 %% Play movie on a trial
 a_const = get_analysis_constants;
 

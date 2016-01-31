@@ -1,4 +1,4 @@
-function [ output_args ] = display_avg_velocity( sid, bdata_raw, bdata_vel, bdata_vel_time, analysis_path )
+function [ output_args ] = display_avg_velocity( sid, bdata_raw, bdata_vel, bdata_vel_time, analysis_path, with_single_trials )
 
 ac = get_analysis_constants;
 settings = sensor_settings;
@@ -18,9 +18,16 @@ mean_left_vel_fwd = squeeze(mean(bdata_vel{ac.LEFT}(:,ac.VEL_FWD,:)));
 mean_right_vel_fwd = squeeze(mean(bdata_vel{ac.RIGHT}(:,ac.VEL_FWD,:)));
 mean_both_vel_fwd = squeeze(mean(bdata_vel{ac.BOTH}(:,ac.VEL_FWD,:)));
 
-sem_left_vel_fwd = squeeze(std(bdata_vel{ac.LEFT}(:,ac.VEL_FWD,:),1)) ./ sqrt(size(bdata_vel{ ac.LEFT }(:,ac.VEL_FWD,:),3));
-sem_right_vel_fwd = squeeze(std(bdata_vel{ac.RIGHT}(:,ac.VEL_FWD,:),1)) ./ sqrt(size(bdata_vel{ ac.RIGHT }(:,ac.VEL_FWD,:),3));
-sem_both_vel_fwd = squeeze(std(bdata_vel{ac.BOTH}(:,ac.VEL_FWD,:),1)) ./ sqrt(size(bdata_vel{ ac.BOTH }(:,ac.VEL_FWD,:),3));
+SHOW_SEM = 1;
+if( SHOW_SEM )
+    sem_left_vel_fwd = squeeze(std(bdata_vel{ac.LEFT}(:,ac.VEL_FWD,:),1)) ./ sqrt(size(bdata_vel{ ac.LEFT }(:,ac.VEL_FWD,:),3));
+    sem_right_vel_fwd = squeeze(std(bdata_vel{ac.RIGHT}(:,ac.VEL_FWD,:),1)) ./ sqrt(size(bdata_vel{ ac.RIGHT }(:,ac.VEL_FWD,:),3));
+    sem_both_vel_fwd = squeeze(std(bdata_vel{ac.BOTH}(:,ac.VEL_FWD,:),1)) ./ sqrt(size(bdata_vel{ ac.BOTH }(:,ac.VEL_FWD,:),3));
+else
+    sem_left_vel_fwd = squeeze(std(bdata_vel{ac.LEFT}(:,ac.VEL_FWD,:),1));
+    sem_right_vel_fwd = squeeze(std(bdata_vel{ac.RIGHT}(:,ac.VEL_FWD,:),1));
+    sem_both_vel_fwd = squeeze(std(bdata_vel{ac.BOTH}(:,ac.VEL_FWD,:),1));
+end
 
 fh = fill( [bdata_vel_time, fliplr(bdata_vel_time)], ... 
         [(mean_left_vel_fwd+sem_left_vel_fwd)' fliplr((mean_left_vel_fwd-sem_left_vel_fwd)')], ...
@@ -138,7 +145,6 @@ y_min = yy(1); y_max = yy(2);
 hh = fill([ first_stim first_stim last_stim last_stim ],[y_min y_max y_max y_min ], rgb('Wheat'));
 set(gca,'children',circshift(get(gca,'children'),-1));
 set(hh, 'EdgeColor', 'None');
-
 
 saveas(f, [analysis_path '/avg_velocity_sid_' num2str( sid ) '.fig']);
 saveas(f, [analysis_path '/avg_velocity_sid_' num2str( sid ) '.png']);

@@ -13,11 +13,6 @@ aconstants = get_analysis_constants;
 trial_type_cnt = aconstants.TRIAL_TYPE_CNT;
 settings = sensor_settings;
 
-if(nargin < 9)
-    first_trial = squeeze(cdata_raw{ 1 }(1,:,:,:,:,:));
-    rois = get_rois_from_volume_v2( first_trial );
-end
-
 for trial_type = 1:trial_type_cnt
     
     cur_trial_cnt = size( cdata_raw{ trial_type }, 1 );
