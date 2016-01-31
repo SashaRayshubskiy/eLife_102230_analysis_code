@@ -80,40 +80,22 @@ display_two_behavioral_condition_traces( condition_trials_str, btraces_per_condi
 diff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, diff_avg_trace_filepath );
 
-%% Temporary test space 
-a_const = get_analysis_constants;
-display_two_behavioral_condition_traces
-cur_trial_type = a_const.RIGHT;
-cur_trial_type_str = a_const.task_str{cur_trial_type};diff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
-display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, diff_avg_trace_filepath );
-
-trial_ord = 4;
-
-cur_cdata     = sqdiff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
-display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, avg_trace_filepath );
-% ueeze(cdata_raw{ cur_trial_type }(trial_ord,:,:,:,:,:));
-rois_v2 = get_rois_from_volume_v2(cur_cdata);
-
-cur_trial_id = squeeze(btrial_meta{ cur_trial_type }(trial_ord, 2));
-
-cur_tbt_filename_prefix = [ analysis_path '/roi_avg_volume_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
-generate_volume_avg_with_rois( cur_cdata, new_rois, cur_tbt_filename_prefix );
-
-%%
+%% Generate time courses for each plane, using the ROIs of a session
 VPS = cdata_meta.volume_rate;
 cur_bdata_vel = squeeze(bdata_vel{ cur_trial_type }(trial_ord,:,:));
-cur_tbt_filename_prefix = [ analysis_path '/time_courses_in_volume_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
+cur_tbt_filename_prefix = [ analysis_path '/time_courses_in_volume_asid_' num2str(asid) '_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
 generate_volume_time_courses_with_rois( cur_cdata, cur_bdata_vel, bdata_vel_time, new_rois, VPS, cur_tbt_filename_prefix );
 
-%% 
+%% Add an ROI to a plane
 plane_to_append = 5;
 new_rois = add_rois_from_volume(cur_cdata, rois_v2, plane_to_append);
 
-%% 
-asid = 0; % roi analysis session id
+%%  Generate ROIs 
+asid = 3; % roi analysis session id
 
 rois = get_rois_from_volume_v2( asid, squeeze(cdata_raw{ 1 }(1,:,:,:,:,:)), analysis_path );
 
+%% Generate trial_by_trial data
 VPS = cdata_meta.volume_rate;
 %tic; generate_trial_by_trial_composite_behaviour_and_calcium_panels( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, analysis_path, new_rois ); toc;
 tic; generate_trial_by_trial_composite_behaviour_and_calcium_panels( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, analysis_path, rois ); toc;
@@ -142,7 +124,7 @@ clicky_with_behaviour( cur_plane_cdata, cur_bdata_vel, bdata_vel_time, VPS, sett
 
 %% Display behavioral data
 display_avg_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
-cd 
+
 %% Play movie on a trial
 a_const = get_analysis_constants;
 
@@ -157,7 +139,8 @@ figsave_prefix = [analysis_path '/mov_' cur_trial_type_str '_tid_' num2str(trial
 play_volumetric_movie(cur_cdata, VPS, figsave_prefix);
 
 %% Play with stim params
-one_trial_bdata = squeeze(b_rawdata{ BOTH }(1,:,:));
+ac = get_analysis_constants;
+one_trial_bdata = squeeze(b_rawdata{ ac.BOTH }(1,:,:));
 
 right_odor_stim = squeeze(one_trial_bdata(:,6));
 left_odor_stim  = squeeze(one_trial_bdata(:,7));
@@ -170,9 +153,106 @@ last_stim = find((left_odor_stim > 2.0), 1, 'last');
 plot(b_time(first_stim), 5.0, 'xr');
 plot(b_time(last_stim), 5.0, 'xr');
 
-%% Play with frame clock
 
-one_trial_bdata = squeeze(b_rawdata{ BOTH }(1,:,:));
+
+%%%%%% ATTIC %%%%%%%
+
+%% Temporary test space 
+a_const = get_analysis_constants;
+display_two_behavioral_condition_traces
+cur_trial_type = a_const.RIGHT;
+cur_trial_type_str = a_const.task_str{cur_trial_type};diff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, diff_avg_trace_filepath );
+
+trial_ord = 4;
+
+cur_cdata     = sqdiff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, avg_trace_filepath );
+% ueeze(cdata_raw{ cur_trial_type }(trial_ord,:,:,:,:,:));
+rois_v2 = get_rois_from_volume_v2(cur_cdata);
+
+cur_trial_id = squeeze(btrial_meta{ cur_trial_type }(trial_ord, 2));
+
+cur_tbt_filename_prefix = [ analysis_path '/roi_avg_volume_asid_' num2str(asid) '_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
+generate_volume_avg_with_rois( cur_cdata, new_rois, cur_tbt_filename_prefix );
+
+%% Get start and stop times for each frame
+% Generate the frame offset within a frame
+
+ac = get_analysis_constants;
+one_trial_bdata = squeeze(b_rawdata{ ac.BOTH }(1,:,:));
+frame_clock     = squeeze(one_trial_bdata(:,5));
+
+figure;
+hold on;
+plot(b_time, frame_clock);
+
+FSTATE_HIGH = 1;
+FSTATE_LOW = 2; 
+cur_state = FSTATE_LOW;
+FRAME_STATE_CHANGE_THRESHOLD = 2.0;
+
+frame_begins_t = [];
+frame_ends_t = [];
+
+for t=1:length(frame_clock)-1
+
+    cur_frame_signal = frame_clock(t);
+    next_frame_signal = frame_clock(t+1);
+    
+    if( cur_state == FSTATE_LOW )
+        % disp(['cfs: ' num2str(cur_frame_signal) ' nfs: ' num2str(next_frame_signal)]);
+        if((cur_frame_signal - next_frame_signal) < -1.0*FRAME_STATE_CHANGE_THRESHOLD )
+            frame_begins_t(end+1) = b_time(t+1);
+            cur_state = FSTATE_HIGH;
+        end
+    elseif( cur_state == FSTATE_HIGH )        
+        if((cur_frame_signal - next_frame_signal) > FRAME_STATE_CHANGE_THRESHOLD )
+            frame_ends_t(end+1) = b_time(t);
+            cur_state = FSTATE_LOW;
+        end
+    else
+        disp(['ERROR: State: ' num2str(cur_state) ' is not recognized.']);
+    end
+end
+
+plot(frame_begins_t, 5.0, 'xr');
+plot(frame_ends_t, 5.0, 'xb');
+
+FPLANES = 16;
+
+frame_begins_in_vol = reshape( frame_begins_t, [ FPLANES, length(frame_begins_t) / FPLANES ] );
+%frame_ends_in_vol = reshape( frame_ends_t, [ FPLANES, length(frame_begins_t) / FPLANES ] );
+
+frame_begin_offsets_in_vol = zeros(size(frame_begins_in_vol));
+
+for v = 1:size(frame_begins_in_vol,2)
+    
+    first_plane_time = frame_begins_in_vol(1,v);
+    
+    for p = 1:size(frame_begins_in_vol,1)
+        frame_begin_offsets_in_vol(p,v) = frame_begins_in_vol(p,v) - first_plane_time;
+    end
+end
+
+f = figure;
+hold on;
+
+for p = 1:size(frame_begins_in_vol,1)
+    avg_offset(p) = squeeze(mean(frame_begin_offsets_in_vol(p,:),2));
+    err_in_offset(p) = squeeze(std(frame_begin_offsets_in_vol(p,:)));       
+end
+
+errorbar( [1:size(frame_begins_in_vol,1)], avg_offset, err_in_offset );
+xlabel('Planes');
+ylabel('Frame start offset (s)');
+
+saveas(f, [analysis_path '/frame_start_offsets_per_plane.fig']);
+saveas(f, [analysis_path '/frame_start_offsets_per_plane.png']);
+
+%% Play with frame clock
+ac = get_analysis_constants;
+one_trial_bdata = squeeze(b_rawdata{ ac.BOTH }(1,:,:));
 frame_clock     = squeeze(one_trial_bdata(:,5));
 
 figure;
@@ -184,6 +264,7 @@ last_stim = find((frame_clock > 2.0), 1, 'last');
 
 plot(b_time(first_stim), 5.0, 'xr');
 plot(b_time(last_stim), 5.0, 'xr');
+
 
 %% Analyze frame start and duration times
 

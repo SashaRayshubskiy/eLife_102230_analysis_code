@@ -41,7 +41,7 @@ for trial_type = 1:size( btraces_per_condition, 2 )
         
         for p=1:PLANES
             subaxis( IMAGE_ROWS+1, IMAGE_COLS, p, 'Spacing', SPACING, 'Padding', PADDING, 'Margin', MARGIN );
-            1
+            
             colorindex = 0;
             
             cur_plane_data = ctraces_in_roi_per_condition{ cond_ord, trial_type, p };
