@@ -48,6 +48,13 @@ file_writer_cnt = 1;
 % Create the reverse mapping from 
 external_trial_id_to_internal_ordinal_map = get_external_trial_id_to_internal_ordinal_map(btrial_meta);
 
+% Create a map of frame start offsets per plane. (This is key because
+% there's about 150 ms interval from first plane to first plane in a
+% volume.
+planes = size( cdata_raw{ 1 }, 5 );
+VPS = cdata_meta.volume_rate;
+frame_start_offsets_per_plane = generate_frame_start_offsets_per_plane( planes, b_rawdata, b_time );
+
 %% Generate expected vs. ignored
 avg_trace_filepath = [ analysis_path '/avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 
@@ -56,9 +63,10 @@ avg_trace_filepath = [ analysis_path '/avg_traces_asid_' num2str( asid ) '_sid_'
 %% Generate stationary vs. motion
 avg_trace_filepath = [ analysis_path '/avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 
-[ condition_trials, condition_trials_str, condition_str ] = generate_stationary_then_motion_vs_motion_trial_list_for_160122_nsyb_83blexA_01( bdata_vel_time, bdata_vel, external_trial_id_to_internal_ordinal_map );
+[ condition_trials, condition_trials_str, condition_str ] = gen_stm_vs_ft_motion_trials_160122_nsyb_83blexA_01( bdata_vel_time, bdata_vel, external_trial_id_to_internal_ordinal_map );
 
-%%
+%% Display behavioral 2 condition trials.
+
 avg_cond_btrace_trace_filepath = [ analysis_path '/' condition_str '_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 with_single_trials = 1;
 display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
@@ -66,7 +74,12 @@ display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_
 with_single_trials = 0;
 display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
 
-%[condition_trials, condition_trials_str] = generate_stationary_to_motion_on_stim_vs_constant_motion_trial_list( bdata_vel_time, bdata_vel );
+%% Create a differece image for each plane
+tic; [] = generate_difference_image(); toc;
+
+
+%% Collect and display time courses in an ROI, both conditions and difference 
+disp('CAUTION: Using blank trials from nsyb_83blexA_01');
 nsyb_83blexA_01_blank_trials = { [165], [163, 164, 167, 359], [166, 360] };
 trial_exclusion_list = nsyb_83blexA_01_blank_trials;
 
@@ -75,23 +88,23 @@ rois = get_rois_from_volume_v2( asid, squeeze(cdata_raw{ 1 }(1,:,:,:,:,:)), anal
 tic; [ btraces_per_condition, ctraces_in_roi_per_condition ] = collect_two_behavioral_condition_traces( condition_trials, cdata_raw, bdata_vel, VPS, rois, trial_exclusion_list, btrial_meta ); toc;
 
 avg_trace_filepath = [ analysis_path '/' condition_str '_avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
-display_two_behavioral_condition_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, avg_trace_filepath );
+display_two_behavioral_condition_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, frame_start_offsets_per_plane, VPS, avg_trace_filepath );
 
 diff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
-display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, diff_avg_trace_filepath );
+display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_avg_trace_filepath );
 
 %% Generate time courses for each plane, using the ROIs of a session
-VPS = cdata_meta.volume_rate;
-cur_bdata_vel = squeeze(bdata_vel{ cur_trial_type }(trial_ord,:,:));
+
+cur_bdata_vel = squeeze(bdata_vel{ cur_trial_type }( trial_ord,:,: ));
 cur_tbt_filename_prefix = [ analysis_path '/time_courses_in_volume_asid_' num2str(asid) '_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
-generate_volume_time_courses_with_rois( cur_cdata, cur_bdata_vel, bdata_vel_time, new_rois, VPS, cur_tbt_filename_prefix );
+generate_volume_time_courses_with_rois( cur_cdata, cur_bdata_vel, bdata_vel_time, new_rois, frame_start_offsets_per_plane, VPS, cur_tbt_filename_prefix );
 
 %% Add an ROI to a plane
 plane_to_append = 5;
 new_rois = add_rois_from_volume(cur_cdata, rois_v2, plane_to_append);
 
 %%  Generate ROIs 
-asid = 3; % roi analysis session id
+asid = 2; % roi analysis session id
 
 rois = get_rois_from_volume_v2( asid, squeeze(cdata_raw{ 1 }(1,:,:,:,:,:)), analysis_path );
 
@@ -153,32 +166,7 @@ last_stim = find((left_odor_stim > 2.0), 1, 'last');
 plot(b_time(first_stim), 5.0, 'xr');
 plot(b_time(last_stim), 5.0, 'xr');
 
-
-
-%%%%%% ATTIC %%%%%%%
-
-%% Temporary test space 
-a_const = get_analysis_constants;
-display_two_behavioral_condition_traces
-cur_trial_type = a_const.RIGHT;
-cur_trial_type_str = a_const.task_str{cur_trial_type};diff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
-display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, diff_avg_trace_filepath );
-
-trial_ord = 4;
-
-cur_cdata     = sqdiff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
-display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, avg_trace_filepath );
-% ueeze(cdata_raw{ cur_trial_type }(trial_ord,:,:,:,:,:));
-rois_v2 = get_rois_from_volume_v2(cur_cdata);
-
-cur_trial_id = squeeze(btrial_meta{ cur_trial_type }(trial_ord, 2));
-
-cur_tbt_filename_prefix = [ analysis_path '/roi_avg_volume_asid_' num2str(asid) '_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
-generate_volume_avg_with_rois( cur_cdata, new_rois, cur_tbt_filename_prefix );
-
-%% Get start and stop times for each frame
-% Generate the frame offset within a frame
-
+%%
 ac = get_analysis_constants;
 one_trial_bdata = squeeze(b_rawdata{ ac.BOTH }(1,:,:));
 frame_clock     = squeeze(one_trial_bdata(:,5));
@@ -221,26 +209,33 @@ plot(frame_ends_t, 5.0, 'xb');
 
 FPLANES = 16;
 
-frame_begins_in_vol = reshape( frame_begins_t, [ FPLANES, length(frame_begins_t) / FPLANES ] );
-%frame_ends_in_vol = reshape( frame_ends_t, [ FPLANES, length(frame_begins_t) / FPLANES ] );
+VOLUMES = length(frame_begins_t) / FPLANES;
 
-frame_begin_offsets_in_vol = zeros(size(frame_begins_in_vol));
+frame_begins_in_vol = reshape( frame_begins_t, [ FPLANES, VOLUMES ] );
+
+frame_start_offsets_per_plane_per_vol = zeros(FPLANES, VOLUMES);
 
 for v = 1:size(frame_begins_in_vol,2)
     
     first_plane_time = frame_begins_in_vol(1,v);
     
-    for p = 1:size(frame_begins_in_vol,1)
-        frame_begin_offsets_in_vol(p,v) = frame_begins_in_vol(p,v) - first_plane_time;
+    for p = 1:FPLANES
+        frame_start_offsets_per_plane_per_vol(p,v) = frame_begins_in_vol(p,v) - first_plane_time;
     end
 end
+    
+frame_start_offsets_per_plane = zeros(1, FPLANES);
+for p = 1:FPLANES
+    frame_start_offsets_per_plane(p) = squeeze(mean(frame_start_offsets_per_plane_per_vol(p,:),2));
+end
 
+if 1
 f = figure;
 hold on;
-
+clear avg_offset err_in_offset;
 for p = 1:size(frame_begins_in_vol,1)
-    avg_offset(p) = squeeze(mean(frame_begin_offsets_in_vol(p,:),2));
-    err_in_offset(p) = squeeze(std(frame_begin_offsets_in_vol(p,:)));       
+    avg_offset(p) = squeeze(mean(frame_start_offsets_per_plane_per_vol(p,:),2));
+    err_in_offset(p) = squeeze(std(frame_start_offsets_per_plane_per_vol(p,:)));       
 end
 
 errorbar( [1:size(frame_begins_in_vol,1)], avg_offset, err_in_offset );
@@ -249,6 +244,39 @@ ylabel('Frame start offset (s)');
 
 saveas(f, [analysis_path '/frame_start_offsets_per_plane.fig']);
 saveas(f, [analysis_path '/frame_start_offsets_per_plane.png']);
+end
+
+cur_plane = 4;
+start_times_in_plane = squeeze(frame_begins_in_vol(cur_plane,:));
+
+figure;
+hold on;
+
+plot(start_times_in_plane, 4, 'x');
+plot([0:size(frame_begins_in_vol,2)-1]./VPS+frame_start_offsets_per_plane(cur_plane), 4, 'o');
+xlim([0 6.5]);
+
+num_points = length(find(start_times_in_plane <= 3.0));
+
+%%%%%% ATTIC %%%%%%%
+
+%% Temporary test space 
+a_const = get_analysis_constants;
+cur_trial_type = a_const.RIGHT;
+cur_trial_type_str = a_const.task_str{cur_trial_type};diff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, diff_avg_trace_filepath );
+
+trial_ord = 4;
+
+cur_cdata     = sqdiff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, avg_trace_filepath );
+% ueeze(cdata_raw{ cur_trial_type }(trial_ord,:,:,:,:,:));
+rois_v2 = get_rois_from_volume_v2(cur_cdata);
+
+cur_trial_id = squeeze(btrial_meta{ cur_trial_type }(trial_ord, 2));
+
+cur_tbt_filename_prefix = [ analysis_path '/roi_avg_volume_asid_' num2str(asid) '_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
+generate_volume_avg_with_rois( cur_cdata, new_rois, cur_tbt_filename_prefix );
 
 %% Play with frame clock
 ac = get_analysis_constants;

@@ -10,7 +10,8 @@ stim    = settings.stim;
 poststim    = settings.post_stim;
 
 base_begin = 1;
-base_end = floor(prestim*VPS);
+baseline_time = prestim-1.0;
+base_end = floor(baseline_time*VPS);
 
 total_time = prestim + stim + poststim;
 

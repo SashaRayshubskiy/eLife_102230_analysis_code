@@ -1,4 +1,4 @@
-function display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, filename_prefix )
+function display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, frame_start_offsets, VPS, filename_prefix )
 
 ac = get_analysis_constants;
 settings = sensor_settings;
@@ -16,16 +16,16 @@ prestim = settings.pre_stim;
 stim    = settings.stim;
 poststim    = settings.post_stim;
 
-base_begin = 1;
-base_end = floor(prestim*VPS);
-
 total_time = prestim + stim + poststim;
 
 first_stim_t = prestim;
 last_stim_t = stim + prestim;
 nframes = size(ctraces_in_roi_per_condition{1,1,1}, 3);
 
-t = [1:nframes]./VPS;
+t = zeros(PLANES,nframes,'double');
+for p=1:PLANES
+    t(p,:) = (([0:nframes-1]))./VPS + frame_start_offsets(p);
+end
 
 for trial_type = 1:size( btraces_per_condition, 2 )
         
@@ -46,7 +46,7 @@ for trial_type = 1:size( btraces_per_condition, 2 )
             avg_trace_cond_1 = mean(squeeze(cur_plane_data_cond_1(:,roi_id,:)));
             avg_trace_cond_2 = mean(squeeze(cur_plane_data_cond_2(:,roi_id,:)));
             
-            plot( t, (avg_trace_cond_1-avg_trace_cond_2), 'color', currcolor );
+            plot( squeeze(t(p,:)), (avg_trace_cond_1-avg_trace_cond_2), 'color', currcolor );
             colorindex = colorindex + 1;
         end
         

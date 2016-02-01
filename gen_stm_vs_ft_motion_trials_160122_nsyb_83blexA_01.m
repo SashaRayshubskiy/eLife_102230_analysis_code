@@ -1,4 +1,4 @@
-function [ condition_trials, condition_trials_str, condition_str ] = generate_stationary_then_motion_vs_motion_trial_list_for_160122_nsyb_83blexA_01( bdata_vel_time, bdata_vel, external_trial_id_to_internal_ordinal_map )
+function [ condition_trials, condition_trials_str, condition_str ] = gen_stm_vs_ft_motion_trials_160122_nsyb_83blexA_01( bdata_vel_time, bdata_vel, external_trial_id_to_internal_ordinal_map )
 % Data below is for 160122_nsyb_83blexA_01
 
 ac = get_analysis_constants;

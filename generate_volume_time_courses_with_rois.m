@@ -1,4 +1,4 @@
-function generate_volume_time_courses_with_rois( trial_cdata, trial_bdata_vel, bdata_vel_time, rois, VPS, filename_prefix )
+function generate_volume_time_courses_with_rois( trial_cdata, trial_bdata_vel, bdata_vel_time, rois, frame_start_offsets, VPS, filename_prefix )
 
 ac = get_analysis_constants;
 settings = sensor_settings;
@@ -17,7 +17,8 @@ stim    = settings.stim;
 poststim    = settings.post_stim;
 
 base_begin = 1;
-base_end = floor(prestim*VPS);
+baseline_time = prestim-1.0;
+base_end = floor(baseline_time*VPS);
 
 total_time = prestim + stim + poststim;
 
@@ -30,7 +31,11 @@ f = figure('units','normalized','outerposition',[0 0 1 1]);
 [x, y] = meshgrid(1:xsize, 1:ysize);
 
 nframes = size(trial_cdata,4);
-t = [1:nframes]./VPS;
+
+t = zeros(PLANES,nframes,'double');
+for p=1:PLANES
+    t(p,:) = ([0:nframes-1])./VPS + frame_start_offsets(p);
+end
 
 for p=1:PLANES
         
@@ -57,7 +62,7 @@ for p=1:PLANES
         itrace = (tmp-baseline) ./ baseline;
         
         hold on;
-        plot(t, itrace,'color', currcolor);
+        plot( squeeze(t(p,:)), itrace,'color', currcolor);
         
         cur_roi_idx = cur_roi_idx + 1;
         if( cur_roi_idx > size(rois,2))
