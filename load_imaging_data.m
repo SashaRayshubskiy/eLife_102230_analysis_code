@@ -56,12 +56,19 @@ for sid = sids
         
         load_path = [ datapath slash filename ];
         raw_data = open_tif_fast( load_path );
+ 
+        dx = 2;
+        dy = 2;
+        x_size = size(raw_data, 1);
+        y_size = size(raw_data, 2);
+        raw_d_down = squeeze(mean(mean(reshape(raw_data, [dx, x_size/dx, dy, y_size/dy, size( raw_data, 3), size(raw_data,4), size(raw_data,5) ]),3),1));
+        
         disp(['Loaded file: ' load_path]);
         
         rid = cdata_idx_per_type(trial_type_idx);
 
         cdata_not_sorted{ trial_type_idx }( end+1, : ) = [ sid, tid, rid ];
-        cdata_not_sorted_helper{ trial_type_idx }( end+1, : ) = { rid, raw_data };
+        cdata_not_sorted_helper{ trial_type_idx }( end+1, : ) = { rid, raw_d_down };
         
         cdata_idx_per_type(trial_type_idx) = cdata_idx_per_type(trial_type_idx) + 1;
     end  

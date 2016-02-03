@@ -4,9 +4,9 @@ SPACING = 0.01;
 PADDING = 0;
 MARGIN = 0.05;
 
-IMAGE_ROWS = 4;
-IMAGE_COLS = 4;
-PLANES = IMAGE_ROWS * IMAGE_COLS;
+PLANES = size(cdata,3);
+IMAGE_ROWS = floor(sqrt(PLANES));
+IMAGE_COLS = IMAGE_ROWS;
 
 ac = get_analysis_constants;
 order = ac.order;
@@ -31,6 +31,10 @@ for i=1:PLANES
     colormap gray;
     caxis([0 3000]);
     axis image;
+IMAGE_ROWS = 4;
+IMAGE_COLS = 4;
+PLANES = IMAGE_ROWS * IMAGE_COLS;
+
     axis off;
     
     ti = title(['Plane: ' num2str(i)]);

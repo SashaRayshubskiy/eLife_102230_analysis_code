@@ -4,9 +4,9 @@ SPACING = 0.01;
 PADDING = 0;
 MARGIN = 0.05;
 
-IMAGE_ROWS = 4;
-IMAGE_COLS = 4;
-PLANES = IMAGE_ROWS * IMAGE_COLS;
+PLANES = size(trial_cdata,3);
+IMAGE_ROWS = floor(sqrt(PLANES));
+IMAGE_COLS = IMAGE_ROWS;
 
 f = figure('units','normalized','outerposition',[0 0 1 1]);
 ac = get_analysis_constants;

@@ -42,9 +42,9 @@ end
 
 FPLANES = planes;
 
-VOLUMES = length(frame_begins_t) / FPLANES;
+VOLUMES = floor(length(frame_begins_t) / FPLANES);
 
-frame_begins_in_vol = reshape( frame_begins_t, [ FPLANES, VOLUMES ] );
+frame_begins_in_vol = reshape( frame_begins_t(1:VOLUMES*FPLANES), [ FPLANES, VOLUMES ] );
 
 frame_start_offsets_per_plane_per_vol = zeros(FPLANES, VOLUMES);
 

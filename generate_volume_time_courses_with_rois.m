@@ -1,4 +1,4 @@
-function generate_volume_time_courses_with_rois( trial_cdata, trial_bdata_vel, bdata_vel_time, rois, frame_start_offsets, VPS, filename_prefix )
+function generate_volume_time_courses_with_rois( trial_cdata, trial_bdata_vel, bdata_vel_time, rois, VPS, filename_prefix )
 
 ac = get_analysis_constants;
 settings = sensor_settings;
@@ -8,17 +8,16 @@ SPACING = 0.01;
 PADDING = 0;
 MARGIN = 0.05;
 
-IMAGE_ROWS = 4;
-IMAGE_COLS = 4;
-PLANES = IMAGE_ROWS * IMAGE_COLS;
+PLANES = size(trial_cdata,3);
+IMAGE_ROWS = floor(sqrt(PLANES));
+IMAGE_COLS = IMAGE_ROWS;
 
 prestim = settings.pre_stim;
 stim    = settings.stim;
 poststim    = settings.post_stim;
 
 base_begin = 1;
-baseline_time = prestim-1.0;
-base_end = floor(baseline_time*VPS);
+base_end = floor(prestim*VPS);
 
 total_time = prestim + stim + poststim;
 
@@ -31,11 +30,7 @@ f = figure('units','normalized','outerposition',[0 0 1 1]);
 [x, y] = meshgrid(1:xsize, 1:ysize);
 
 nframes = size(trial_cdata,4);
-
-t = zeros(PLANES,nframes,'double');
-for p=1:PLANES
-    t(p,:) = ([0:nframes-1])./VPS + frame_start_offsets(p);
-end
+t = [1:nframes]./VPS;
 
 for p=1:PLANES
         
@@ -55,14 +50,14 @@ for p=1:PLANES
         
         inpoly = inpolygon(x,y,xv,yv);
         
-        currcolor = order(1+mod(colorindex,size(order,1)),:);
+        currcolor = order(1+mod(colorindex,size(order,1)),:);;
         
         tmp = squeeze(sum(sum(cdata_in_plane .* repmat(inpoly, [1, 1, nframes])))) / sum(inpoly(:));
         baseline = repmat(mean(tmp(base_begin:base_end)), [1 1 size(tmp,2)]);
         itrace = (tmp-baseline) ./ baseline;
         
         hold on;
-        plot( squeeze(t(p,:)), itrace,'color', currcolor);
+        plot(t, itrace,'color', currcolor);
         
         cur_roi_idx = cur_roi_idx + 1;
         if( cur_roi_idx > size(rois,2))
