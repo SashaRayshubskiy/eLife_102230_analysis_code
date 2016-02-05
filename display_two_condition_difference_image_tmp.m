@@ -1,4 +1,4 @@
-function display_two_condition_difference_image_tmp( condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets, VPS, filename_prefix )
+function display_two_condition_difference_image_tmp( ref_img, PLANE_OF_INTEREST, TRIAL_TYPE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets, VPS, filename_prefix )
 
 ac = get_analysis_constants;
 settings = sensor_settings;
@@ -40,13 +40,15 @@ baseline_start = 0;
 baseline_end = 2.8;
 
 %for trial_type = 1:size( btraces_per_condition, 2 )
-for trial_type = 2
+for trial_type = TRIAL_TYPE_OF_INTEREST
         
-    f1 = figure('units','normalized','outerposition',[0 0 1 1]);
-    f2 = figure('units','normalized','outerposition',[0 0 1 1]);
+%    f1 = figure('units','normalized','outerposition',[0 0 1 1]);
+%    f2 = figure('units','normalized','outerposition',[0 0 1 1]);
+    f1 = figure();
+    f2 = figure();
        
     % for p=1:PLANES
-    for p = 10
+    for p = PLANE_OF_INTEREST
         %subaxis( IMAGE_ROWS+1, IMAGE_COLS, p, 'Spacing', SPACING, 'Padding', PADDING, 'Margin', MARGIN );
         %subplot(1,3,1); 
                
@@ -76,33 +78,50 @@ for trial_type = 2
 
         figure(f1);
 
-        subplot(3,1,1); 
+        ax1 = subplot(2,2,1); 
+        [xsize, ysize] = size(ref_img);
+        %imagesc(imresize(ref_img, [xsize 2*ysize]));
+        imagesc( ref_img );
+        colormap(ax1, 'gray');
+        axis image;
+        caxis([0 4000]);
+        title([ac.task_str{trial_type}]);
+
+        ax2 = subplot(2,2,2); 
         imagesc(avg_df_f_img_cond_1);
         axis image;
-        colormap jet;
+        colormap(ax2, 'jet');
         caxis([-0 0.5]);
+        tt = title(['Condition 1: ' condition_trials_str{1}]);
+        set(tt, 'Interpreter', 'none');
 
-        subplot(3,1,2); 
+        ax3 = subplot(2,2,4); 
         imagesc(avg_df_f_img_cond_2);
         axis image;
-        colormap jet;
+        colormap(ax3, jet);
         caxis([-0 0.5]);       
+        tt = title(['Condition 2: ' condition_trials_str{2}]);
+        set(tt, 'Interpreter', 'none');
 
-        subplot(3,1,3);
+        ax4 = subplot(2,2,3);
         save('/tmp/diff_img.mat', 'diff_img');
         diff_img_filt = filter_dithered_image( diff_img );
         imagesc( diff_img_filt );
         axis image;
-        colormap jet;
-        caxis([-0.1 0.8]);       
+        colormap(ax4, 'jet');
+        caxis(ax4,[-0.1 0.8]);       
+        title('Diff img');
         
         a_data_1 = cur_plane_avg_df_f_cond_1;
         a_data_2 = cur_plane_avg_df_f_cond_2;
 
+        plt_cond_1 = [];
+        plt_cond_2 = [];
+        
         while(npts > 0)
             
             figure(f1)
-            subplot(3,1,3);
+            subplot(2,2,1);
             % subplot(1,3,1)
             [xv, yv] = (getline(gca, 'closed'));
             if size(xv,1) < 3  % exit loop if only a line is drawn
@@ -128,8 +147,8 @@ for trial_type = 2
             subplot(1,1,1)
             hold on;
             cur_t = squeeze(t(p,:));
-            plot( cur_t, itrace_1, 'Color', currcolor, 'LineWidth', 2);
-            plot( cur_t, itrace_2, 'Color', currcolor, 'LineWidth', 2, 'LineStyle', '--');
+            plt_cond_1(end+1) = plot( cur_t, itrace_1, 'Color', currcolor, 'LineWidth', 2);
+            plt_cond_2(end+1) = plot( cur_t, itrace_2, 'Color', currcolor, 'LineWidth', 2, 'LineStyle', '--');
             
             xlim([0 max(cur_t)]);
             %ylim([-0.2 0.75]);
@@ -142,13 +161,26 @@ for trial_type = 2
           
             roi_points{nroi} = [xv, yv];
             nroi = nroi + 1;
-        end
+        end                
         
-        if( p == 2 )
-            tt = title(ac.task_str(trial_type));
-            set(tt, 'Interpreter', 'none');
-        end
+        figure( f2 );
+        %ax1 = subplot(1,3,2:3); % plot the trace
+        subplot(1,1,1)
 
+        yy = ylim;
+        y_min = yy(1)-yy(1)*0.01; y_max = yy(2);
+        hh = fill([ first_stim_t first_stim_t last_stim_t last_stim_t ],[y_min y_max y_max y_min ], rgb('Wheat'));
+        set(gca,'children',circshift(get(gca,'children'),-1));
+        set(hh, 'EdgeColor', 'None');
+
+        cond_1_num_trials = size( btraces_per_condition{ 1, trial_type }( :, ac.VEL_YAW, : ), 1 );
+        cond_2_num_trials = size( btraces_per_condition{ 2, trial_type }( :, ac.VEL_YAW, : ), 1 );
+        
+        ll = legend( [ plt_cond_1(1), plt_cond_2(1) ], ...
+                     [ condition_trials_str{ 1 } '(' num2str( cond_1_num_trials ) ')'], ...
+                     [ condition_trials_str{ 2 } '(' num2str( cond_2_num_trials ) ')'], 'Location', 'southeast');
+        set(ll, 'Interpreter', 'none');
+        
         drawnow;
     end
     
@@ -195,8 +227,10 @@ if 0
     end
 end
 
-    %saveas(f, [ filename_prefix '_' ac.task_str{trial_type} '.fig']);
-    %saveas(f, [ filename_prefix '_' ac.task_str{trial_type} '.png']);
+    saveas(f1, [ filename_prefix '_' ac.task_str{trial_type} '_rois.fig']);
+    saveas(f1, [ filename_prefix '_' ac.task_str{trial_type} '_rois.png']);
+    saveas(f2, [ filename_prefix '_' ac.task_str{trial_type} '_tc.fig']);
+    saveas(f2, [ filename_prefix '_' ac.task_str{trial_type} '_tc.png']);
     % close(f);
 end
 

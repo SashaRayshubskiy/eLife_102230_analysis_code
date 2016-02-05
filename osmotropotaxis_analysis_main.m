@@ -12,12 +12,15 @@ end
 % Must end with a slash
 %datapath = '/data/drive_fast/sasha/160118_R84C10_83blexA_02/';
 %datapath = '/data/drive_fast/sasha/160125_nsyb_83blexA_02/';
-datapath = '/data/drive_fast/sasha/160122_nsyb_83blexA_01/';
-disp('CAUTION: Using blank trials from nsyb_83blexA_01');
+%datapath = '/data/drive_fast/sasha/160122_nsyb_83blexA_01/';
+%disp('CAUTION: Using blank trials from nsyb_83blexA_01');
 %nsyb_83blexA_01_blank_trials = { [165], [163, 164, 167, 359], [166, 360] };
-%trial_exclusion_list = nsyb_83blexA_01_blank_trials;
+%nsyb_83blexA_06_blank_trials = { [44,342], [], [491] };
 
-%datapath = '/data/drive0/sasha/160202_nsyb_83blexA_06/';
+%trial_exclusion_list = nsyb_83blexA_01_blank_trials;
+trial_exclusion_list = {[],[],[]};
+
+datapath = '/data/drive0/sasha/160204_nsyb_83blexA_08/';
 
 analysis_path = [datapath slash 'analysis'];
 
@@ -25,7 +28,7 @@ if(~exist(analysis_path, 'dir'))
     mkdir(analysis_path);
 end
 
-sid = 2;
+sid = 0;
 
 aconstants = get_analysis_constants;
 trial_type_cnt = aconstants.TRIAL_TYPE_CNT;
@@ -36,7 +39,9 @@ tic; [ b_rawdata, b_time, btrial_meta ] = load_behavioral_data(sid, bdata_path, 
 
 % Load imaging data
 cdata_path = [datapath  slash '2p' slash ];
-tic; [ cdata_raw, cdata_meta, ctrial_meta ] = load_imaging_data(sid, cdata_path, trial_type_cnt ); toc
+dx = 1;
+dy = 2;
+tic; [ cdata_raw, cdata_meta, ctrial_meta ] = load_imaging_data(sid, cdata_path, trial_type_cnt, dx, dy ); toc
 
 % Check that the behavioral and imaging trials match up
 check_bdata_and_cdata_trial_integrity( btrial_meta, ctrial_meta );
@@ -104,9 +109,23 @@ display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_
 tic; [ btraces_per_condition, avg_df_f_per_condition_per_plane ] = collect_two_behavioral_condition_and_df_f_per_cond( condition_trials, cdata_raw, bdata_vel, VPS, rois, trial_exclusion_list, btrial_meta ); toc;
 
 %%
-diff_image_path = [ analysis_path '/' condition_str '_diff_image_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+roi_session = 0;
+
+diff_image_path = [ analysis_path '/' condition_str '_diff_image_asid_' num2str( asid ) '_sid_' num2str(sid) '_roi_session_' num2str(roi_session) ];
 %display_two_condition_difference_image(condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
-display_two_condition_difference_image_tmp(condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
+
+PLANE_OF_INTEREST = 13;
+TRIAL_TYPE_OF_INTEREST = 3;
+ref_img = mean(squeeze(cdata_raw{ 1 }(1,:,:,PLANE_OF_INTEREST,:)),3);
+
+display_two_condition_difference_image_tmp(ref_img, PLANE_OF_INTEREST, TRIAL_TYPE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
+
+%% Generate stack movie
+stack_path = [datapath '/2p/stack_00004.tif'];
+[cur_stack] = generate_stack_movie(stack_path);
+
+
+
 
 %% test dithering filter
 img_load = load('/tmp/diff_img.mat');
@@ -123,12 +142,10 @@ title('Before');
 
 subplot(2,1,2);
 imagesc(img_filt);
-axis image;
+axis image;trial_exclusion_list = {[],[],[]};
 colormap jet;
 caxis([-0.1 1.0]);
 title('After');
-
-
 
 %% Collect and display time courses in an ROI, both condition        
 rois = get_rois_from_volume_v2( asid, squeeze(cdata_raw{ 1 }(1,:,:,:,:,:)), analysis_path );
@@ -144,6 +161,7 @@ display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_
 %% Generate time courses for each plane, using the ROIs of a session
 
 cur_bdata_vel = squeeze(bdata_vel{ cur_trial_type }( trial_ord,:,: ));
+
 cur_tbt_filename_prefix = [ analysis_path '/time_courses_in_volume_asid_' num2str(asid) '_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
 generate_volume_time_courses_with_rois( cur_cdata, cur_bdata_vel, bdata_vel_time, new_rois, frame_start_offsets_per_plane, VPS, cur_tbt_filename_prefix );
 
@@ -315,15 +333,15 @@ display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_
 
 trial_ord = 4;
 
-cur_cdata     = sqdiff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+cur_cdata     = squeeze(cdata_raw{ cur_trial_type }(trial_ord,:,:,:,:,:));
 display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, VPS, avg_trace_filepath );
-% ueeze(cdata_raw{ cur_trial_type }(trial_ord,:,:,:,:,:));
+% 
 rois_v2 = get_rois_from_volume_v2(cur_cdata);
 
 cur_trial_id = squeeze(btrial_meta{ cur_trial_type }(trial_ord, 2));
 
 cur_tbt_filename_prefix = [ analysis_path '/roi_avg_volume_asid_' num2str(asid) '_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
-generate_volume_avg_with_rois( cur_cdata, new_rois, cur_tbt_filename_prefix );
+generate_volume_avg_with_rois( cur_cdata, rois, cur_tbt_filename_prefix );
 
 %% Play with frame clock
 ac = get_analysis_constants;

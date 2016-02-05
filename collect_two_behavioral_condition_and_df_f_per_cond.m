@@ -3,7 +3,7 @@ function [ btraces_per_condition, avg_df_f_per_condition_per_plane ] = collect_t
 ac = get_analysis_constants;
 settings = sensor_settings;
 
-PLANES = size( cdata_raw{1}, 5 );
+PLANES = size( cdata_raw{1}, 4 );
 
 prestim = settings.pre_stim;
 stim    = settings.stim;
@@ -22,7 +22,7 @@ btraces_per_condition = cell(2,size( condition_trials, 1 ));
 
 x_size = size(cdata_raw{ 1 }, 2);
 y_size = size(cdata_raw{ 1 }, 3);
-nframes = size(cdata_raw{ 1 }, 6);
+nframes = size(cdata_raw{ 1 }, 5);
 avg_df_f_per_condition_per_plane = zeros( 3, 2, PLANES, x_size, y_size, nframes );
 
 for trial_type = 1:size( condition_trials, 1 )

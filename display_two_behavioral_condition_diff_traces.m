@@ -8,9 +8,9 @@ SPACING = 0.01;
 PADDING = 0;
 MARGIN = 0.05;
 
-IMAGE_ROWS = 4;
-IMAGE_COLS = 4;
-PLANES = IMAGE_ROWS * IMAGE_COLS;
+PLANES = size(ctraces_in_roi_per_condition,3);
+IMAGE_ROWS = floor(sqrt(PLANES));
+IMAGE_COLS = IMAGE_ROWS;
 
 prestim = settings.pre_stim;
 stim    = settings.stim;
@@ -68,7 +68,7 @@ for trial_type = 1:size( btraces_per_condition, 2 )
         set(hh, 'EdgeColor', 'None');
         
         xlim([0, total_time]);
-        if(mod((p-1),4) == 0 )
+        if(mod((p-1),IMAGE_COLS) == 0 )
             ylabel('diff dF/F');
         else
             set(gca, 'YTickLabel', '');

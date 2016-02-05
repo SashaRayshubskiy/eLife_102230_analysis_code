@@ -1,4 +1,4 @@
-function [ cdata_raw, cdata_meta, trial_metadata ] = load_imaging_data( sids, datapath, trial_type_cnt )
+function [ cdata_raw, cdata_meta, trial_metadata ] = load_imaging_data( sids, datapath, trial_type_cnt, dx, dy )
 
 % Inputs:
 % sids - array or a single SID of the trials to load
@@ -57,8 +57,6 @@ for sid = sids
         load_path = [ datapath slash filename ];
         raw_data = open_tif_fast( load_path );
  
-        dx = 2;
-        dy = 2;
         x_size = size(raw_data, 1);
         y_size = size(raw_data, 2);
         raw_d_down = squeeze(mean(mean(reshape(raw_data, [dx, x_size/dx, dy, y_size/dy, size( raw_data, 3), size(raw_data,4), size(raw_data,5) ]),3),1));

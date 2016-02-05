@@ -3,7 +3,7 @@ function [ btraces_per_condition, ctraces_in_roi_per_condition ] = collect_two_b
 ac = get_analysis_constants;
 settings = sensor_settings;
 
-PLANES = size( cdata_raw{1}, 5 );
+PLANES = size( cdata_raw{1}, 4 );
 
 prestim = settings.pre_stim;
 stim    = settings.stim;
@@ -21,7 +21,7 @@ last_stim_t = stim + prestim;
 [ysize, xsize] = size(squeeze(cdata_raw{1}(1,:,:,1,1,1)));
 [x, y] = meshgrid(1:xsize, 1:ysize);
 
-nframes = size( squeeze(cdata_raw{1}(1,:,:,1,1,:)), 3 );
+nframes = size( squeeze(cdata_raw{1}(1,:,:,1,:)), 3 );
 
 ctraces_in_roi_per_condition = cell(2,size( condition_trials, 1 ),PLANES);
 btraces_per_condition = cell(2,size( condition_trials, 1 ));

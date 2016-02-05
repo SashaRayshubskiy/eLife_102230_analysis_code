@@ -8,9 +8,6 @@ SPACING = 0.01;
 PADDING = 0;
 MARGIN = 0.05;
 
-IMAGE_ROWS = 4;
-IMAGE_COLS = 4;
-PLANES = IMAGE_ROWS * IMAGE_COLS;
 
 prestim = settings.pre_stim;
 stim    = settings.stim;
@@ -21,6 +18,10 @@ total_time = prestim + stim + poststim;
 first_stim_t = prestim;
 last_stim_t = stim + prestim;
 nframes = size(ctraces_in_roi_per_condition{1,1,1}, 3);
+
+PLANES = size(ctraces_in_roi_per_condition,3);
+IMAGE_ROWS = floor(sqrt(PLANES));
+IMAGE_COLS = IMAGE_ROWS;
 
 t = zeros(PLANES,nframes,'double');
 for p=1:PLANES
@@ -71,7 +72,7 @@ for trial_type = 1:size( btraces_per_condition, 2 )
             set(hh, 'EdgeColor', 'None');
             
             xlim([0, total_time]);
-            if(mod((p-1),4) == 0 )
+            if(mod((p-1),IMAGE_COLS) == 0 )
                 ylabel('dF/F');
             else
                 set(gca, 'YTickLabel', '');

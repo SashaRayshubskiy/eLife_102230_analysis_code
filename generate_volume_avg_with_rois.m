@@ -17,7 +17,10 @@ for i=1:PLANES
     %all_axes(i) = subplot(IMAGE_ROWS, IMAGE_COLS, i);
     
     % Throw away the first few volumes due to settling time.
-    imagesc(mean(squeeze(trial_cdata(:,:,i,3:end)),3));
+    ref_img = mean(squeeze(trial_cdata(:,:,i,3:end)),3);
+    [xsize, ysize] = size(ref_img);
+    %imagesc(imresize(ref_img, [xsize 2*ysize]));
+    imagesc( ref_img );
     colormap gray;
     caxis([0 3000]);
     axis image;

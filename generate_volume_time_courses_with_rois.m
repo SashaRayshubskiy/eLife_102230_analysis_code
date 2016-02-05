@@ -83,7 +83,7 @@ for p=1:PLANES
     set(hh, 'EdgeColor', 'None');
     
     xlim([0, total_time]);
-    if(mod((p-1),4) == 0 )
+    if(mod((p-1),IMAGE_COLS) == 0 )
         ylabel('dF/F');
     else
         set(gca, 'YTickLabel', '');
