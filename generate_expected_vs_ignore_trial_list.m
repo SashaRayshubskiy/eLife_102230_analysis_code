@@ -17,8 +17,8 @@ LEFT_TURN  = 1;
 RIGHT_TURN = 2;
 NO_TURN    = 3;
 
-TURN_THRESHOLD = 0.01; % ???
-FWD_VELOCITY_THRESHOLD = 0.002;
+TURN_THRESHOLD = 0.001; % ???
+FWD_VELOCITY_THRESHOLD = 0.001;
 
 condition_trials = cell(3,2);
 
@@ -35,7 +35,7 @@ for trial_type = 1:size( bdata_vel, 2 )
             continue;
         end
         
-        yaw_during_stim = cur_yaw_tc( find( (bdata_vel_time > prestim) & (bdata_vel_time < (prestim+stim))) );
+        yaw_during_stim = cur_yaw_tc( find( (bdata_vel_time > prestim) & (bdata_vel_time <= (prestim+stim))) );
         avg_yaw_during_stim = mean(yaw_during_stim);
                    
         turn_status = -1;

@@ -1,4 +1,4 @@
-function display_two_condition_difference_image_tmp( ref_img, PLANE_OF_INTEREST, TRIAL_TYPE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets, VPS, filename_prefix )
+function display_two_condition_difference_image_debug( ref_img, PLANE_OF_INTEREST, TRIAL_TYPE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets, VPS, filename_prefix )
 
 ac = get_analysis_constants;
 settings = sensor_settings;
@@ -65,7 +65,8 @@ for trial_type = TRIAL_TYPE_OF_INTEREST
         cur_t = squeeze(t(p,:));
 
         % Extract frames during stim only for now.
-        cur_frames = find((cur_t >= prestim) & (cur_t<=(prestim+stim)));
+        PAD = 1.0;
+        cur_frames = find((cur_t >= (prestim-PAD)) & (cur_t<=(prestim+stim+PAD)));
 
         avg_df_f_img_cond_1 = squeeze(mean(cur_plane_avg_df_f_cond_1(:,:,cur_frames),3));
         avg_df_f_img_cond_2 = squeeze(mean(cur_plane_avg_df_f_cond_2(:,:,cur_frames),3));
@@ -111,27 +112,49 @@ for trial_type = TRIAL_TYPE_OF_INTEREST
         
         cur_plane_avg_df_f_cond_1_down = downsample_with_mask(cur_plane_avg_df_f_cond_1, ref_img_mask, dx, dy);
         cur_plane_avg_df_f_cond_2_down = downsample_with_mask(cur_plane_avg_df_f_cond_2, ref_img_mask, dx, dy);
-            
-        
+                    
         frames_of_interest_cond_1 = cur_plane_avg_df_f_cond_1_down(:,:,cur_frames);
         frames_of_interest_cond_2 = cur_plane_avg_df_f_cond_2_down(:,:,cur_frames);
         
-        diff_img_down = trapz(frames_of_interest_cond_1,3) - trapz(frames_of_interest_cond_2,3);
+        %diff_img_down = trapz(frames_of_interest_cond_1,3) - trapz(frames_of_interest_cond_2,3);
+        dx_size = size(frames_of_interest_cond_1,1);
+        dy_size = size(frames_of_interest_cond_1,2);
         
-        if 0
-            avg_df_f_img_cond_1_down = squeeze(mean(cur_plane_avg_df_f_cond_1_down(:,:,cur_frames),3));
-            avg_df_f_img_cond_2_down = squeeze(mean(cur_plane_avg_df_f_cond_2_down(:,:,cur_frames),3));
-
-            %diff_img_down = avg_df_f_img_cond_1_down ./ avg_df_f_img_cond_2_down;
-            diff_img_down = avg_df_f_img_cond_1_down - avg_df_f_img_cond_2_down;
+        diff_img_down = ones(dx_size, dy_size);
+        kept_trials = cell(1, dx_size * dy_size);
+        
+        kept_trials_index = 0;
+        
+        P_VALUE_THRESHOLD = 0.01;
+        for ii = 1:dx_size
+            for jj = 1:dy_size
+                cur_p = signrank(squeeze(frames_of_interest_cond_1(ii,jj,:)), squeeze(frames_of_interest_cond_2(ii,jj,:)));
+                if(cur_p < P_VALUE_THRESHOLD )
+                    diff_img_down(ii,jj) = cur_p;
+                    
+                    % add debugging info
+                    kept_trials( kept_trials_index ) = { cur_p, ii,jj, squeeze(frames_of_interest_cond_1(ii,jj,:)), squeeze(frames_of_interest_cond_1(ii,jj,:)) };
+                    
+                    kept_trials_index = kept_trials_index + 1;
+                end
+            end
         end
         
+        sortrows(kept_trials);
+        
+        figure;
+        
+        
+
+        
+        figure(f1);
         imagesc( [1:ysize], [1:xsize], diff_img_down );
         xlim([1 ysize]);
         ylim([1 xsize]);
         axis image;
         colormap(ax4, 'jet');
-        %caxis(ax4,[0.0 0.1]);       
+        caxis(ax4,[0.0 0.05]);       
+        %colorbar;
         title('Diff img');
         
         a_data_1 = cur_plane_avg_df_f_cond_1;
@@ -140,33 +163,7 @@ for trial_type = TRIAL_TYPE_OF_INTEREST
         plt_cond_1 = [];
         plt_cond_2 = [];
         
-        figure;
-        diff_img_down_scaled = expand_img(diff_img_down, dx, dy);
-        ref_img_filt = ref_img.*ref_img_mask;
-        save('/tmp/overlay.mat', 'ref_img_filt', 'diff_img_down_scaled');
-        
-        C = imfuse(ref_img_filt, diff_img_down_scaled, 'blend', 'Scaling', 'joint');
-        imshow(C);
-        
-        if( 0 ) colormap jet;
-            
-            h = imagesc( ref_img.*ref_img_mask );
-            colormap(ax1, 'gray');
-            axis image;
-            caxis([0 4000]);
-            title([ac.task_str{trial_type}]);
-            set(h, 'AlphaData', diff_img_down_scaled);
-            
-            figure;
-            cur_t = squeeze(t(p,:));
-            hold on;
-            plot(cur_t, squeeze(cur_plane_avg_df_f_cond_1_down(6,11,:)), 'color', 'r');
-            plot(cur_t, squeeze(cur_plane_avg_df_f_cond_2_down(6,11,:)), 'color', 'r', 'LineStyle', '--');
-            plot(cur_t, squeeze(cur_plane_avg_df_f_cond_1_down(6,7,:)), 'color', 'b');
-            plot(cur_t, squeeze(cur_plane_avg_df_f_cond_2_down(6,7,:)), 'color', 'b', 'LineStyle', '--');
-        end
-        
-        clicky_plane = 1;
+        clicky_plane = 3;
         while(npts > 0)
             
             figure(f1)
@@ -176,63 +173,40 @@ for trial_type = TRIAL_TYPE_OF_INTEREST
             if size(xv,1) < 3  % exit loop if only a line is drawn
                 break
             end
+            
             inpoly = inpolygon(x,y,xv,yv);
-            
-            [ idx_r, idx_c ]  = find(inpoly == 1);
-                        
-            if 0                
-
-                total_cnt = length(idx_r);
-
-            figure;
-            for ii = 1:total_cnt
-                subplot(1,2,1)
-                hold on;
-                plot(squeeze(a_data_1(idx_r(ii),idx_c(ii),cur_frames)));
-                ylim([-0.5 1.5]);
-            
-                subplot(1,2,2)
-                hold on;
-                plot(squeeze(a_data_2(idx_r(ii),idx_c(ii),cur_frames)));
-                ylim([-0.5 1.5]);
-                
-                waitforbuttonpress
-            end
-    
-                pixel_by_pixel_img_1 = zeros(total_cnt, length(cur_frames));
-                pixel_by_pixel_img_2 = zeros(total_cnt, length(cur_frames));
-                
-                for ii = 1:total_cnt
-                    pixel_by_pixel_img_1(ii,:) = squeeze(a_data_1(idx_r(ii),idx_c(ii),cur_frames));
-                    pixel_by_pixel_img_2(ii,:) = squeeze(a_data_2(idx_r(ii),idx_c(ii),cur_frames));
-                end
-            end
-                   
-            figure(f1)
-            subplot(2,2,clicky_plane);
+                                   
             %draw the bounding polygons and label them
             currcolor    = order(1+mod(colorindex,size(order,1)),:);
             hold on;
             plot(xv, yv, 'Linewidth', 1,'Color',currcolor);
             text(mean(xv),mean(yv),num2str(colorindex+1),'Color',currcolor,'FontSize',12);
             
-            %bline_s = floor(baseline_start*VPS);
-            bline_s = 1;
-            bline_e = floor(baseline_end*VPS);
+            cur_t = squeeze(t(p,:));
             
-            itrace_1 = squeeze(sum(sum(double(a_data_1).*repmat(inpoly, [1, 1, nframes]))))/sum(inpoly(:));
-            itrace_2 = squeeze(sum(sum(double(a_data_2).*repmat(inpoly, [1, 1, nframes]))))/sum(inpoly(:));
+            if 0
+                bline_s = 1;
+                bline_e = floor(baseline_end*VPS);
+                
+                itrace_1 = squeeze(sum(sum(double(a_data_1).*repmat(inpoly, [1, 1, nframes]))))/sum(inpoly(:));
+                itrace_2 = squeeze(sum(sum(double(a_data_2).*repmat(inpoly, [1, 1, nframes]))))/sum(inpoly(:));
+            end
+            
+            xx = xv(1);
+            xx_down = ceil( abs(xx)/dx );
+            yy = yv(1);
+            yy_down = ceil( abs(yy)/dy );
+            
+            itrace_1 = squeeze(cur_plane_avg_df_f_cond_1_down(yy_down,xx_down,:));
+            itrace_2 = squeeze(cur_plane_avg_df_f_cond_2_down(yy_down,xx_down,:));
             
             figure(f2);
-            %ax1 = subplot(1,3,2:3); % plot the trace
             subplot(1,1,1)
             hold on;
-            cur_t = squeeze(t(p,:));
             plt_cond_1(end+1) = plot( cur_t, itrace_1, 'Color', currcolor, 'LineWidth', 2);
             plt_cond_2(end+1) = plot( cur_t, itrace_2, 'Color', currcolor, 'LineWidth', 2, 'LineStyle', '--');
             
             xlim([0 max(cur_t)]);
-            %ylim([-0.2 0.75]);
             xlabel('Time (s)', 'FontSize', 14, 'FontWeight', 'bold');
             ylabel('dF/F');
             set(gca, 'FontSize', 14 );

@@ -5,8 +5,17 @@ PADDING = 0;
 MARGIN = 0.05;
 
 PLANES = size(trial_cdata,3);
-IMAGE_ROWS = floor(sqrt(PLANES));
-IMAGE_COLS = IMAGE_ROWS;
+
+if(PLANES == 8)
+    IMAGE_ROWS = 2;
+    IMAGE_COLS = 4;
+elseif(PLANES == 12)
+    IMAGE_ROWS = 3;
+    IMAGE_COLS = 4;
+else
+    IMAGE_ROWS = floor(sqrt(PLANES));
+    IMAGE_COLS = IMAGE_ROWS;
+end
 
 f = figure('units','normalized','outerposition',[0 0 1 1]);
 ac = get_analysis_constants;
@@ -22,7 +31,7 @@ for i=1:PLANES
     %imagesc(imresize(ref_img, [xsize 2*ysize]));
     imagesc( ref_img );
     colormap gray;
-    caxis([0 3000]);
+    caxis([0 1000]);
     axis image;
     axis off;
     

@@ -1,4 +1,4 @@
-function [ btraces_per_condition, avg_df_f_per_condition_per_plane ] = collect_two_behavioral_condition_and_df_f_per_cond( condition_trials, cdata_raw, bdata_vel, VPS, rois, trial_exclusion_list, btrial_meta)
+function [ btraces_per_condition, avg_df_f_per_condition_per_plane ] = collect_two_behavioral_condition_and_df_f_per_cond( condition_trials, cdata_raw, bdata_vel, VPS, trial_exclusion_list, btrial_meta)
 
 ac = get_analysis_constants;
 settings = sensor_settings;
@@ -10,7 +10,7 @@ stim    = settings.stim;
 poststim    = settings.post_stim;
 
 base_begin = 1;
-baseline_time = prestim-1.0;
+baseline_time = prestim;
 base_end = floor(baseline_time*VPS);
 
 total_time = prestim + stim + poststim;

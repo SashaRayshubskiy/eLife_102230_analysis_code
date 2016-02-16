@@ -9,8 +9,14 @@ PADDING = 0;
 MARGIN = 0.05;
 
 PLANES = size(ctraces_in_roi_per_condition,3);
-IMAGE_ROWS = floor(sqrt(PLANES));
-IMAGE_COLS = IMAGE_ROWS;
+
+if(PLANES == 12)
+    IMAGE_ROWS = 3;
+    IMAGE_COLS = 4;
+else
+    IMAGE_ROWS = floor(sqrt(PLANES));
+    IMAGE_COLS = IMAGE_ROWS;
+end
 
 prestim = settings.pre_stim;
 stim    = settings.stim;

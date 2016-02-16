@@ -9,8 +9,17 @@ PADDING = 0;
 MARGIN = 0.05;
 
 PLANES = size(trial_cdata,3);
-IMAGE_ROWS = floor(sqrt(PLANES));
-IMAGE_COLS = IMAGE_ROWS;
+
+if(PLANES == 8)
+    IMAGE_ROWS = 2;
+    IMAGE_COLS = 4;
+elseif(PLANES == 12)
+    IMAGE_ROWS = 3;
+    IMAGE_COLS = 4;
+else
+    IMAGE_ROWS = floor(sqrt(PLANES));
+    IMAGE_COLS = IMAGE_ROWS;
+end
 
 prestim = settings.pre_stim;
 stim    = settings.stim;
@@ -68,12 +77,20 @@ for p=1:PLANES
         colorindex = colorindex + 1;
     end
     
-    if(p>=1 & p<=8 )
-        ylim([-0.4 1.5]);
-    elseif (p>=9 & p<=12 )
-        ylim([-0.4 1.0]);
-    elseif (p>=13 & p<=16 )
-        ylim([-0.4 0.5]);
+    if( PLANES == 16 )
+        if(p>=1 & p<=8 )
+            ylim([-0.4 1.5]);
+        elseif (p>=9 & p<=12 )
+            ylim([-0.4 1.0]);
+        elseif (p>=13 & p<=16 )
+            ylim([-0.4 0.5]);
+        end
+    elseif( PLANES == 8 ) 
+        if(p>=1 & p<=4 )
+            ylim([-0.6 2.0]);
+        elseif (p>=5 & p<=8 )
+            ylim([-0.6 2.0]);
+        end
     end
     
     yy = ylim;

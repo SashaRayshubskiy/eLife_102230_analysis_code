@@ -29,7 +29,7 @@ for i=1:PLANES
     % Throw away the first few volumes due to settling time.
     imagesc(mean(squeeze(cdata(:,:,i,3:end)),3));
     colormap gray;
-    caxis([0 3000]);
+    caxis([0 1500]);
     axis image;
 IMAGE_ROWS = 4;
 IMAGE_COLS = 4;

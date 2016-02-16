@@ -20,8 +20,14 @@ last_stim_t = stim + prestim;
 nframes = size(ctraces_in_roi_per_condition{1,1,1}, 3);
 
 PLANES = size(ctraces_in_roi_per_condition,3);
-IMAGE_ROWS = floor(sqrt(PLANES));
-IMAGE_COLS = IMAGE_ROWS;
+
+if(PLANES == 12)
+    IMAGE_ROWS = 3;
+    IMAGE_COLS = 4;
+else
+    IMAGE_ROWS = floor(sqrt(PLANES));
+    IMAGE_COLS = IMAGE_ROWS;
+end
 
 t = zeros(PLANES,nframes,'double');
 for p=1:PLANES
