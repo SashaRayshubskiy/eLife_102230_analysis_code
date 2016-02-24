@@ -1,7 +1,7 @@
 function [ frame_start_offsets_per_plane ] = generate_frame_start_offsets_per_plane( planes, b_rawdata, b_time )
 
 ac = get_analysis_constants;
-one_trial_bdata = squeeze(b_rawdata{ ac.BOTH }(1,:,:));
+one_trial_bdata = squeeze(b_rawdata{ ac.LEFT }(1,:,:));
 frame_clock     = squeeze(one_trial_bdata(:,5));
 
 %figure;

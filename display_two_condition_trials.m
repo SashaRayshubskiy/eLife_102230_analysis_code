@@ -17,8 +17,8 @@ last_stim_t = stim + prestim;
 
 f = figure('units','normalized','outerposition',[0 0 1 1]);
 
-%for trial_type = 1:size(condition_trials,1)
-for trial_type = [2 3]
+for trial_type = 1:size(condition_trials,1)
+%for trial_type = [2 3]
     for cond_ord = [2 1]        
 
         cur_cond_symbol = '-';              
@@ -40,7 +40,7 @@ for trial_type = [2 3]
         end
         
         %subaxis( 3, 1, trial_type, 'Spacing', SPACING, 'Padding', PADDING, 'Margin', MARGIN );
-       subplot( 2, 1, trial_type-1 );
+       subplot( 2, 1, trial_type );
         
         hold on;
         

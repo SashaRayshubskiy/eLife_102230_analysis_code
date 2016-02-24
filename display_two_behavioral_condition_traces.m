@@ -21,7 +21,10 @@ nframes = size(ctraces_in_roi_per_condition{1,1,1}, 3);
 
 PLANES = size(ctraces_in_roi_per_condition,3);
 
-if(PLANES == 12)
+if(PLANES == 8)
+    IMAGE_ROWS = 2;
+    IMAGE_COLS = 4;
+elseif(PLANES == 12)
     IMAGE_ROWS = 3;
     IMAGE_COLS = 4;
 else

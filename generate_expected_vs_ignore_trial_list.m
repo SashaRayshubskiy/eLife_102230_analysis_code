@@ -17,12 +17,13 @@ LEFT_TURN  = 1;
 RIGHT_TURN = 2;
 NO_TURN    = 3;
 
-TURN_THRESHOLD = 0.001; % ???
+TURN_THRESHOLD = 0.01; % ???
 FWD_VELOCITY_THRESHOLD = 0.001;
 
-condition_trials = cell(3,2);
+trial_cnt = size( bdata_vel, 2 );
+condition_trials = cell(trial_cnt,2);
 
-for trial_type = 1:size( bdata_vel, 2 )
+for trial_type = 1:trial_cnt
     for trial_ord = 1:size( bdata_vel{trial_type}, 1 )
         
         cur_yaw_tc = bdata_vel{ trial_type }( trial_ord, ac.VEL_YAW, : );

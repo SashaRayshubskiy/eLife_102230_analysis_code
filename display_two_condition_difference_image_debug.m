@@ -110,21 +110,36 @@ for trial_type = TRIAL_TYPE_OF_INTEREST
         %cur_plane_avg_df_f_cond_1_down = squeeze(mean(mean(reshape(cur_plane_avg_df_f_cond_1, [dx, xsize/dx, dy, ysize/dy, nframes ]),3),1));        
         %cur_plane_avg_df_f_cond_2_down = squeeze(mean(mean(reshape(cur_plane_avg_df_f_cond_2, [dx, xsize/dx, dy, ysize/dy, nframes ]),3),1));        
         
+        UPSAMPLE_FACTOR = 100;
+
+        cur_t_up = squeeze(t(p,:));
+
         cur_plane_avg_df_f_cond_1_down = downsample_with_mask(cur_plane_avg_df_f_cond_1, ref_img_mask, dx, dy);
         cur_plane_avg_df_f_cond_2_down = downsample_with_mask(cur_plane_avg_df_f_cond_2, ref_img_mask, dx, dy);
+
+        cur_plane_avg_df_f_cond_1_up = upsample_in_t( cur_plane_avg_df_f_cond_1_down, UPSAMPLE_FACTOR );
+        cur_plane_avg_df_f_cond_2_up = upsample_in_t( cur_plane_avg_df_f_cond_2_down, UPSAMPLE_FACTOR );        
                     
-        frames_of_interest_cond_1 = cur_plane_avg_df_f_cond_1_down(:,:,cur_frames);
-        frames_of_interest_cond_2 = cur_plane_avg_df_f_cond_2_down(:,:,cur_frames);
+        VPS_UPSAMPLE = VPS * UPSAMPLE_FACTOR;
+        cutoff_freq = 0.5;
+        cur_plane_avg_df_f_cond_1_up_filt = fft_filter_3D( cur_plane_avg_df_f_cond_1_up, cutoff_freq, VPS_UPSAMPLE );
+        cur_plane_avg_df_f_cond_2_up_filt = fft_filter_3D( cur_plane_avg_df_f_cond_2_up, cutoff_freq, VPS_UPSAMPLE );                
+        
+        %diff_frames = find((cur_t >= (prestim)) & (cur_t<=(prestim+stim)));
+        diff_frames = [1:length(cur_plane_avg_df_f_cond_1_up_filt)];
+        frames_of_interest_cond_1 = cur_plane_avg_df_f_cond_1_up_filt( :, :, diff_frames );
+        frames_of_interest_cond_2 = cur_plane_avg_df_f_cond_2_up_filt( :, :, diff_frames );
         
         %diff_img_down = trapz(frames_of_interest_cond_1,3) - trapz(frames_of_interest_cond_2,3);
         dx_size = size(frames_of_interest_cond_1,1);
         dy_size = size(frames_of_interest_cond_1,2);
         
         diff_img_down = ones(dx_size, dy_size);
-        kept_trials = cell(1, dx_size * dy_size);
+        kept_trials = zeros(dx_size * dy_size, 3);
         
-        kept_trials_index = 0;
+        kept_trials_index = 1;
         
+        if 0
         P_VALUE_THRESHOLD = 0.01;
         for ii = 1:dx_size
             for jj = 1:dy_size
@@ -133,19 +148,56 @@ for trial_type = TRIAL_TYPE_OF_INTEREST
                     diff_img_down(ii,jj) = cur_p;
                     
                     % add debugging info
-                    kept_trials( kept_trials_index ) = { cur_p, ii,jj, squeeze(frames_of_interest_cond_1(ii,jj,:)), squeeze(frames_of_interest_cond_1(ii,jj,:)) };
+                    kept_trials( kept_trials_index, : ) = [ cur_p, ii, jj ];
                     
                     kept_trials_index = kept_trials_index + 1;
                 end
             end
         end
         
-        sortrows(kept_trials);
+        kept_trials_p_value_sorted = sortrows( kept_trials(1:kept_trials_index-1,:), [1 2 3]);
         
         figure;
-        
-        
+        active_roi_cnt = length(kept_trials_p_value_sorted);
+        NUM_ROI_PER_AXES = 2;
+        num_axes = floor(active_roi_cnt/NUM_ROI_PER_AXES);
+        AXES_ROWS = floor(sqrt(num_axes));
+        AXES_COLS = ceil(num_axes/AXES_ROWS);
 
+        cur_t = squeeze(t(p,:));
+        roi_idx = 1;
+        for a = 1:num_axes
+            subaxis( AXES_ROWS, AXES_COLS, a, 'Spacing', SPACING, 'Padding', PADDING, 'Margin', MARGIN );
+            for kk = 0:NUM_ROI_PER_AXES-1
+
+                currcolor    = order(1+mod(kk,size(order,1)),:);
+
+                pv = kept_trials_p_value_sorted( roi_idx, 1 );
+                xx = kept_trials_p_value_sorted( roi_idx, 2 );
+                yy = kept_trials_p_value_sorted( roi_idx, 3 );
+                
+                itrace_1 = squeeze(cur_plane_avg_df_f_cond_1_down(xx,yy,:));
+                itrace_2 = squeeze(cur_plane_avg_df_f_cond_2_down(xx,yy,:));
+
+                hold on;
+                plt_1(kk+1) = plot( cur_t, itrace_1, 'Color', currcolor, 'LineWidth', 2);
+                plt_2(kk+1) = pv;
+                plot( cur_t, itrace_2, 'Color', currcolor, 'LineWidth', 2, 'LineStyle', '--');
+                
+                roi_idx = roi_idx + 1;
+            end
+            
+            legend([plt_1(1), plt_1(2)], ['pv: ' num2str(plt_2(1), '%10.1e')], ['pv: ' num2str(plt_2(2), '%10.1e')], 'location', 'southeast');            
+            
+            xlim([0 6.5]);
+            ylim([-0.5 0.5]);
+            yy = ylim;
+            y_min = yy(1)-yy(1)*0.01; y_max = yy(2);
+            hh = fill([ first_stim_t first_stim_t last_stim_t last_stim_t ],[y_min y_max y_max y_min ], rgb('Wheat'));
+            set(gca,'children',circshift(get(gca,'children'),-1));
+            set(hh, 'EdgeColor', 'None');
+        end
+        end
         
         figure(f1);
         imagesc( [1:ysize], [1:xsize], diff_img_down );
@@ -156,6 +208,8 @@ for trial_type = TRIAL_TYPE_OF_INTEREST
         caxis(ax4,[0.0 0.05]);       
         %colorbar;
         title('Diff img');
+        
+        return;
         
         a_data_1 = cur_plane_avg_df_f_cond_1;
         a_data_2 = cur_plane_avg_df_f_cond_2;

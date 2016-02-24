@@ -43,11 +43,11 @@ for sid = sids
         tid = str2num(char(tid_str));
         
         trial_type_idx = -1;
-        if((strcmp(trial_type, 'BothOdor') == 1) | (strcmp(trial_type, 'NaturalOdor') == 1))
-            trial_type_idx = 1;
-        elseif(strcmp(trial_type, 'LeftOdor') == 1)
-            trial_type_idx = 2;        
+        if(strcmp(trial_type, 'LeftOdor') == 1)
+            trial_type_idx = 1;        
         elseif(strcmp(trial_type, 'RightOdor') == 1)
+            trial_type_idx = 2;
+        elseif((strcmp(trial_type, 'BothOdor') == 1) | (strcmp(trial_type, 'NaturalOdor') == 1))
             trial_type_idx = 3;
         else
             disp(['ERROR: Trial type: ' trial_type ' is not recognized']);

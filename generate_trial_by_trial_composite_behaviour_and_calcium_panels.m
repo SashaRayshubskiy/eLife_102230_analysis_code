@@ -10,7 +10,7 @@ if(~exist(tbt_analysis_path, 'dir'))
 end
 
 aconstants = get_analysis_constants;
-trial_type_cnt = aconstants.TRIAL_TYPE_CNT;
+trial_type_cnt = length(cdata_raw);
 settings = sensor_settings;
 
 for trial_type = 1:trial_type_cnt

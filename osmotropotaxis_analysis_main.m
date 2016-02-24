@@ -20,7 +20,7 @@ end
 %trial_exclusion_list = nsyb_83blexA_01_blank_trials;
 trial_exclusion_list = {[],[],[]};
 
-datapath = '/data/drive0/sasha/160213_R94C05_83blexA_01/';
+datapath = '/data/drive0/sasha/160223_nsyb_83blexA_20/';
 
 analysis_path = [datapath slash 'analysis'];
 
@@ -28,10 +28,10 @@ if(~exist(analysis_path, 'dir'))
     mkdir(analysis_path);
 end
 
-sid = 1;
+sid = [2];
 
 aconstants = get_analysis_constants;
-trial_type_cnt = aconstants.TRIAL_TYPE_CNT;
+trial_type_cnt = 2;
 
 % Load behavioral data
 bdata_path = [datapath  slash 'ball' slash ];
@@ -40,7 +40,8 @@ tic; [ b_rawdata, b_time, btrial_meta ] = load_behavioral_data(sid, bdata_path, 
 % Load imaging data
 cdata_path = [datapath  slash '2p' slash ];
 dx = 1;
-dy = 2;
+dy = 1;
+dt = 2;
 down_params(1) = dx;
 down_params(2) = dy;
 tic; [ cdata_raw, cdata_meta, ctrial_meta ] = load_imaging_data(sid, cdata_path, trial_type_cnt, dx, dy ); toc
@@ -73,7 +74,7 @@ display_avg_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
 
 %% Display behavioral data
 %datapath_tmp = '/data/drive0/sasha/160211_nsyb_83blexA_11/';
-datapath_tmp = '/data/drive0/sasha/160214_nsyb_83blexA_behaviour_only_02/';
+datapath_tmp = '/data/drive0/sasha/160223_nsyb_83blexA_20/';
 
 analysis_path_tmp = [datapath_tmp slash 'analysis'];
 
@@ -81,16 +82,20 @@ if(~exist(analysis_path_tmp, 'dir'))
     mkdir(analysis_path_tmp);
 end
 
-sid_tmp = 0;
+sid_tmp = [2];
+trial_type_cnt_tmp = 2;
 
 bdata_path_tmp = [datapath_tmp  slash 'ball' slash ];
-tic; [ b_rawdata_tmp, b_time_tmp, btrial_meta_tmp ] = load_behavioral_data(sid_tmp, bdata_path_tmp, trial_type_cnt ); toc
+tic; [ b_rawdata_tmp, b_time_tmp, btrial_meta_tmp ] = load_behavioral_data(sid_tmp, bdata_path_tmp, trial_type_cnt_tmp ); toc
 
 [bdata_vel_time_tmp, bdata_vel_tmp] = reformat_raw_behavioral_data( b_time_tmp, b_rawdata_tmp );
 
-display_avg_velocity(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
-%display_avg_velocity_exclude_zero_vel(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
+% display_avg_velocity(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
+% display_avg_velocity_exclude_zero_vel(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
 
+display_avg_velocity_exclude_zero_vel_RL_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
+display_avg_velocity_left_right_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
+display_per_trial_velocity(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
 
 %% Generate expected vs. ignored
 avg_trace_filepath = [ analysis_path '/avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];

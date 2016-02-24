@@ -1,11 +1,11 @@
 function aconstants = get_analysis_constants
 
 aconstants.TRIAL_TYPE_CNT = 3;
-aconstants.BOTH = 1;
-aconstants.LEFT = 2;
-aconstants.RIGHT = 3;
+aconstants.LEFT = 1;
+aconstants.RIGHT = 2;
+aconstants.BOTH = 3;
 
-aconstants.task_str = {'BothOdor', 'LeftOdor', 'RightOdor'};
+aconstants.task_str = {'LeftOdor', 'RightOdor', 'BothOdor'};
 
 aconstants.LEFT_CLR =  rgb('FireBrick');
 aconstants.RIGHT_CLR = rgb('SeaGreen');
