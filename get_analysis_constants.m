@@ -11,12 +11,13 @@ aconstants.LEFT_CLR =  rgb('FireBrick');
 aconstants.RIGHT_CLR = rgb('SeaGreen');
 aconstants.BOTH_CLR = rgb('DarkBlue');
 
-aconstants.LEFT_CLR_SINGLE =  rgb('FireBrick');
-aconstants.RIGHT_CLR_SINGLE = rgb('SeaGreen');
-aconstants.BOTH_CLR_SINGLE = rgb('DarkBlue');
-aconstants.LEFT_CLR =  rgb('LightSalmon');
-aconstants.RIGHT_CLR = rgb('PaleGreen');
-aconstants.BOTH_CLR = rgb('LightBlue');
+aconstants.LEFT_CLR_SINGLE =  rgb('LightSalmon');
+aconstants.RIGHT_CLR_SINGLE = rgb('PaleGreen');
+aconstants.BOTH_CLR_SINGLE = rgb('LightBlue');
+
+aconstants.clr_by_type = { aconstants.LEFT_CLR, aconstants.RIGHT_CLR, aconstants.BOTH_CLR };
+aconstants.single_clr_by_type = { aconstants.LEFT_CLR_SINGLE, aconstants.RIGHT_CLR_SINGLE, aconstants.BOTH_CLR_SINGLE };
+
 aconstants.VEL_FWD = 1;
 aconstants.VEL_SIDE = 2;
 aconstants.VEL_YAW = 3;

@@ -29,7 +29,7 @@ for trial_type = 1:trial_cnt
         cur_yaw_tc = bdata_vel{ trial_type }( trial_ord, ac.VEL_YAW, : );
         cur_fwd_tc = bdata_vel{ trial_type }( trial_ord, ac.VEL_FWD, : );
         
-        fwd_vel = cur_yaw_tc( find( bdata_vel_time < (prestim+stim)) );
+        fwd_vel = cur_fwd_tc( find( bdata_vel_time < (prestim+stim)) );
         avg_fwd_vel = mean( fwd_vel );
                 
         if( avg_fwd_vel < FWD_VELOCITY_THRESHOLD )

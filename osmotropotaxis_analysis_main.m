@@ -97,13 +97,25 @@ display_avg_velocity_exclude_zero_vel_RL_only(sid_tmp, b_rawdata_tmp, bdata_vel_
 display_avg_velocity_left_right_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
 display_per_trial_velocity(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
 
+%%
+display_avg_velocity_exclude_zero_vel_RL_only(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
+display_avg_velocity_left_right_only(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
+display_per_trial_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
+
+%% Test the idea that activation of 'LAL' turning region between the 2 sides corresponds to turn magnitude.
+
+generate_turning_magnitude_vs_bilateral_calcium_delta_response_plot( bdata_vel_time, bdata_vel, cdata_raw, frame_start_offsets_per_plane, VPS, analysis_path );
+
+
 %% Generate expected vs. ignored
-avg_trace_filepath = [ analysis_path '/avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 
 [ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list( bdata_vel_time, bdata_vel );
 
+%% Generate large vs. small counter turn
+
+[ condition_trials, condition_trials_str, condition_str ] = generate_large_vs_small_turn_trial_list( sid, bdata_vel_time, bdata_vel, analysis_path );
+
 %% Generate stationary vs. motion
-avg_trace_filepath = [ analysis_path '/avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 
 [ condition_trials, condition_trials_str, condition_str ] = gen_stm_vs_ft_motion_trials_160122_nsyb_83blexA_01( bdata_vel_time, bdata_vel, external_trial_id_to_internal_ordinal_map );
 
@@ -138,8 +150,20 @@ roi_session = 30;
 diff_image_path = [ analysis_path '/' condition_str '_diff_image_asid_' num2str( asid ) '_sid_' num2str(sid) '_roi_session_' num2str(roi_session) ];
 display_two_condition_difference_image(down_params, ref_imgs, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
 
-%%
-roi_session = 53;
+%% Clicky showing avg data for 2 conditions
+
+ac = get_analysis_constants();
+
+roi_session = 5;
+PLANE_OF_INTEREST = 6;
+TRIAL_TYPE_OF_INTEREST = ac.RIGHT;
+ref_img = mean(squeeze(cdata_raw{ 1 }(1,:,:,PLANE_OF_INTEREST,:)),3);
+
+diff_image_path = [ analysis_path '/' condition_str '_diff_image_asid_' num2str( asid ) '_sid_' num2str(sid) '_roi_session_' num2str(roi_session) ];
+clicky_two_condition_bdata(ref_img, PLANE_OF_INTEREST, TRIAL_TYPE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
+
+%% Testing new unsupervised comparison of clustered data
+roi_session = 0;
 
 PLANE_OF_INTEREST = 10;
 TRIAL_TYPE_OF_INTEREST = 2;
@@ -178,7 +202,23 @@ display_two_behavioral_condition_traces( condition_trials_str, btraces_per_condi
 
 diff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_avg_trace_filepath );
+[bdata_vel_time, bdata_vel] = reformat_raw_behavioral_data( b_time, b_rawdata );
 
+settings = sensor_settings;
+global file_writer_cnt;
+file_writer_cnt = 1;
+
+% Create the reverse mapping from 
+external_trial_id_to_internal_ordinal_map = get_external_trial_id_to_internal_ordinal_map(btrial_meta);
+
+% Create a map of frame start offsets per plane. (This is key because
+% there's about 150 ms interval from first plane to first plane in a
+% volume.
+planes = size( cdata_raw{ 1 }, 5 );
+VPS = cdata_meta.volume_rate;
+frame_start_offsets_per_plane = generate_frame_start_offsets_per_plane( planes, b_rawdata, b_time );
+
+ref_imgs = generate_ref_imgs(cdata_raw);
 %% Generate time courses for each plane, using the ROIs of a session
 
 cur_bdata_vel = squeeze(bdata_vel{ cur_trial_type }( trial_ord,:,: ));
@@ -194,6 +234,16 @@ new_rois = add_rois_from_volume(cur_cdata, rois_v2, plane_to_append);
 asid = 0; % roi analysis session id
 
 rois = get_rois_from_volume_v2( asid, squeeze(cdata_raw{ 1 }(1,:,:,:,:,:)), analysis_path );
+
+a_const = get_analysis_constants;
+cur_trial_type = a_const.RIGHT;
+trial_ord = 4;
+
+cur_cdata     = squeeze(cdata_raw{ cur_trial_type }(trial_ord,:,:,:,:,:));
+cur_trial_id = squeeze(btrial_meta{ cur_trial_type }(trial_ord, 2));
+
+cur_tbt_filename_prefix = [ analysis_path '/roi_avg_volume_asid_' num2str(asid) '_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
+generate_volume_avg_with_rois( cur_cdata, rois, cur_tbt_filename_prefix );
 
 %% Generate trial_by_trial data
 VPS = cdata_meta.volume_rate;
