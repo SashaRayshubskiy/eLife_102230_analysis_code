@@ -9,7 +9,7 @@ first_stim = find((left_odor_stim > 2.0), 1, 'first') ./ settings.sampRate;
 last_stim = find((left_odor_stim > 2.0), 1, 'last') ./ settings.sampRate;
 
 kept_trials = {[], [], []};
-FWD_VEL_THRESH = 0.02;
+FWD_VEL_THRESH = 0.001;
 
 for trial_type = 1:length(bdata_vel)
     current_trials = bdata_vel{ trial_type }(:,:,:);

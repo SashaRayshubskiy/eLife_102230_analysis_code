@@ -1,8 +1,8 @@
-function [ condition_trials, condition_trials_str, condition_str ] = generate_large_vs_small_turn_trial_list( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path )
+function [ condition_trials, condition_trials_str, condition_str ] = generate_large_vs_small_counter_turn_trial_list( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path )
 
 ac = get_analysis_constants();
-condition_trials_str = { 'large_turns', 'small_turns' };
-condition_str = 'large_vs_small_turning';
+condition_trials_str = { 'large_counter_turns', 'small_counter_turns' };
+condition_str = 'large_vs_small_counter_turning';
 
 settings = sensor_settings;
 prestim = settings.pre_stim;
@@ -21,8 +21,8 @@ FWD_VELOCITY_THRESHOLD = 0.001;
 
 for trial_type = 1:trial_type_cnt
     
-    % second column is the turn magnitude
-    [Nbins, edges] = histcounts( turn_metadata{ trial_type }(:,2) );    
+    % fourth column is the counter turn magnitude
+    [Nbins, edges] = histcounts( turn_metadata{ trial_type }(:,4) );    
         
     % Take out bins near zero (and to the opposite side of the turn)
     % divide the rest of the bin space into 3 groups: small, middle, large
@@ -35,8 +35,8 @@ for trial_type = 1:trial_type_cnt
                 
         %large_turn_range = [ edges(1), edges(range_bin) ];
         %small_turn_range = [ edges(range_bin) edges(2*range_bin)];
-        large_turn_range = [ -0.4, -0.12 ];
-        small_turn_range = [-0.12 -0.03];
+        large_turn_range = [ 0.15, 0.3 ];
+        small_turn_range = [ 0.03 0.15];
     
     elseif( trial_type == ac.RIGHT )
         first_nonzero_turn_idx = (find(edges == 0) + 1);
@@ -47,13 +47,13 @@ for trial_type = 1:trial_type_cnt
         
         %large_turn_range = [edges(first_nonzero_turn_idx + range_bin) edges(first_nonzero_turn_idx + 2*range_bin-1)];
         %small_turn_range = [edges(first_nonzero_turn_idx), edges(first_nonzero_turn_idx + range_bin)];        
-        large_turn_range = [0.15 0.3];
-        small_turn_range = [0.03 0.12];
+        large_turn_range = [-0.4 -0.12];
+        small_turn_range = [-0.12 -0.03];
     end    
     
     for trial_ord = 1:size( bdata_vel{trial_type}, 1 )
         
-        turn_magnitude = turn_metadata{ trial_type }( trial_ord, 2 );
+        turn_magnitude = turn_metadata{ trial_type }( trial_ord, 4 );
         
         cur_fwd_tc = bdata_vel{ trial_type }( trial_ord, ac.VEL_FWD, : );
                         

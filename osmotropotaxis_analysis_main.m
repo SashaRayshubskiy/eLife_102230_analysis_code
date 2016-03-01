@@ -20,7 +20,7 @@ end
 %trial_exclusion_list = nsyb_83blexA_01_blank_trials;
 trial_exclusion_list = {[],[],[]};
 
-datapath = '/data/drive0/sasha/160223_nsyb_83blexA_20/';
+datapath = '/data/drive0/sasha/160229_nsyb_83blexA_27/';
 
 analysis_path = [datapath slash 'analysis'];
 
@@ -28,7 +28,7 @@ if(~exist(analysis_path, 'dir'))
     mkdir(analysis_path);
 end
 
-sid = [2];
+sid = [0];
 
 aconstants = get_analysis_constants;
 trial_type_cnt = 2;
@@ -74,7 +74,7 @@ display_avg_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
 
 %% Display behavioral data
 %datapath_tmp = '/data/drive0/sasha/160211_nsyb_83blexA_11/';
-datapath_tmp = '/data/drive0/sasha/160223_nsyb_83blexA_20/';
+datapath_tmp = '/data/drive0/sasha/160229_nsyb_83blexA_27/';
 
 analysis_path_tmp = [datapath_tmp slash 'analysis'];
 
@@ -82,7 +82,7 @@ if(~exist(analysis_path_tmp, 'dir'))
     mkdir(analysis_path_tmp);
 end
 
-sid_tmp = [2];
+sid_tmp = [0];
 trial_type_cnt_tmp = 2;
 
 bdata_path_tmp = [datapath_tmp  slash 'ball' slash ];
@@ -102,6 +102,11 @@ display_avg_velocity_exclude_zero_vel_RL_only(sid, b_rawdata, bdata_vel, bdata_v
 display_avg_velocity_left_right_only(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
 display_per_trial_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
 
+%% Generate turning clusters using standard unsupervised clustering tools.
+MAX_CLUSTERS = 5;
+clust = generate_turning_clusters( sid, bdata_vel_time, bdata_vel, analysis_path, MAX_CLUSTERS );
+
+
 %% Test the idea that activation of 'LAL' turning region between the 2 sides corresponds to turn magnitude.
 
 generate_turning_magnitude_vs_bilateral_calcium_delta_response_plot( bdata_vel_time, bdata_vel, cdata_raw, frame_start_offsets_per_plane, VPS, analysis_path );
@@ -109,11 +114,28 @@ generate_turning_magnitude_vs_bilateral_calcium_delta_response_plot( bdata_vel_t
 
 %% Generate expected vs. ignored
 
-[ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list( bdata_vel_time, bdata_vel );
+turn_metadata = generate_turning_metadata( sid, bdata_vel_time, bdata_vel, analysis_path );
+
+% [ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list( bdata_vel_time, bdata_vel );
+[ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list_v2( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path );
 
 %% Generate large vs. small counter turn
 
-[ condition_trials, condition_trials_str, condition_str ] = generate_large_vs_small_turn_trial_list( sid, bdata_vel_time, bdata_vel, analysis_path );
+turn_metadata = generate_turning_metadata( sid, bdata_vel_time, bdata_vel, analysis_path );
+
+[ condition_trials, condition_trials_str, condition_str ] = generate_large_vs_small_turn_trial_list( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path )
+
+%% Generate large vs. small counter turn
+[ condition_trials, condition_trials_str, condition_str ] = generate_large_vs_small_counter_turn_trial_list( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path )
+
+%% Generate counter turn vs. no counter turn
+[ condition_trials, condition_trials_str, condition_str ] = generate_counter_turn_vs_no_counter_turn_trial_list( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path )
+
+%% Generate early vs. late turns
+[ condition_trials, condition_trials_str, condition_str ] = generate_early_vs_late_turn_trial_list( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path )
+
+%% Generate quick vs. delayed counter turns
+[ condition_trials, condition_trials_str, condition_str ] = generate_quick_vs_delayed_counter_turn_trial_list( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path )
 
 %% Generate stationary vs. motion
 
@@ -129,6 +151,17 @@ display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_
 
 with_single_trials = 0;
 display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
+
+%% Get covariance plots from 2 symmetric ROIs
+ac = get_analysis_constants();
+
+PLANE_OF_INTEREST = 9;
+
+roi_session = 0;
+rois_path = [analysis_path '/roi_session_' num2str(roi_session) '.mat' ];
+rois_1 = get_rois_from_volume( PLANE_OF_INTEREST, squeeze(cdata_raw{ 1 }(1,:,:,:,:,:)), rois_path );
+
+generate_two_rois_comparison_with_turning_metadata( sid, rois_1, PLANE_OF_INTEREST, cdata_raw, turn_metadata, frame_start_offsets_per_plane, VPS, btrial_meta, analysis_path );
 
 %% Create a differece image for each plane
 tic; [ btraces_per_condition, avg_df_f_per_condition_per_plane ] = collect_two_behavioral_condition_and_df_f_per_cond( condition_trials, cdata_raw, bdata_vel, VPS, trial_exclusion_list, btrial_meta ); toc;
@@ -150,12 +183,12 @@ roi_session = 30;
 diff_image_path = [ analysis_path '/' condition_str '_diff_image_asid_' num2str( asid ) '_sid_' num2str(sid) '_roi_session_' num2str(roi_session) ];
 display_two_condition_difference_image(down_params, ref_imgs, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
 
-%% Clicky showing avg data for 2 conditions
+%% Clicky showing avg data for 2 conditionsquick
 
 ac = get_analysis_constants();
 
-roi_session = 5;
-PLANE_OF_INTEREST = 6;
+roi_session = 19;
+PLANE_OF_INTEREST = 9;
 TRIAL_TYPE_OF_INTEREST = ac.RIGHT;
 ref_img = mean(squeeze(cdata_raw{ 1 }(1,:,:,PLANE_OF_INTEREST,:)),3);
 

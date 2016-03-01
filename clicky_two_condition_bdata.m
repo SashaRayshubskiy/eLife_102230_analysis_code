@@ -81,7 +81,7 @@ a_data_2 = cur_plane_avg_df_f_cond_2;
 plt_cond_1 = [];
 plt_cond_2 = [];
 
-clicky_plane = 1;
+clicky_plane = 2;
 while(npts > 0)
     
     subplot(2,2,clicky_plane);
