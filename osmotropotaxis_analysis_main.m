@@ -161,7 +161,8 @@ roi_session = 0;
 rois_path = [analysis_path '/roi_session_' num2str(roi_session) '.mat' ];
 rois_1 = get_rois_from_volume( PLANE_OF_INTEREST, squeeze(cdata_raw{ 1 }(1,:,:,:,:,:)), rois_path );
 
-generate_two_rois_comparison_with_turning_metadata( sid, rois_1, PLANE_OF_INTEREST, cdata_raw, turn_metadata, frame_start_offsets_per_plane, VPS, btrial_meta, analysis_path );
+% generate_df_f_vs_turning_magnitude_trial_plot( sid, rois_1, PLANE_OF_INTEREST, cdata_raw, turn_metadata, frame_start_offsets_per_plane, VPS, btrial_meta, analysis_path );
+generate_df_f_delta_vs_turning_magnitude_trial_plot( sid, rois_1, PLANE_OF_INTEREST, cdata_raw, turn_metadata, frame_start_offsets_per_plane, VPS, btrial_meta, analysis_path );
 
 %% Create a differece image for each plane
 tic; [ btraces_per_condition, avg_df_f_per_condition_per_plane ] = collect_two_behavioral_condition_and_df_f_per_cond( condition_trials, cdata_raw, bdata_vel, VPS, trial_exclusion_list, btrial_meta ); toc;
