@@ -20,7 +20,7 @@ end
 %trial_exclusion_list = nsyb_83blexA_01_blank_trials;
 trial_exclusion_list = {[],[],[]};
 
-datapath = '/data/drive0/sasha/160229_nsyb_83blexA_27/';
+datapath = '/data/drive0/sasha/160420_opGCaMP6s_83blexA_R11B11_02/';
 
 analysis_path = [datapath slash 'analysis'];
 
@@ -41,13 +41,18 @@ tic; [ b_rawdata, b_time, btrial_meta ] = load_behavioral_data(sid, bdata_path, 
 cdata_path = [datapath  slash '2p' slash ];
 dx = 1;
 dy = 1;
-dt = 2;
+dt = 1;
 down_params(1) = dx;
 down_params(2) = dy;
-tic; [ cdata_raw, cdata_meta, ctrial_meta ] = load_imaging_data(sid, cdata_path, trial_type_cnt, dx, dy ); toc
+
+if( dt == 1 )
+    tic; [ cdata_raw, cdata_meta, ctrial_meta ] = load_imaging_data(sid, cdata_path, trial_type_cnt, dx, dy, dt ); toc
+else
+    tic; [ cdata_raw, cdata_meta, ctrial_meta ] = load_imaging_data_single_plane(sid, cdata_path, trial_type_cnt, dx, dy, dt ); toc
+end
 
 % Check that the behavioral and imaging trials match up
-check_bdata_and_cdata_trial_integrity( btrial_meta, ctrial_meta );
+%check_bdata_and_cdata_trial_integrity( btrial_meta, ctrial_meta );
 
 % Get behavioral data that is usable for analysis
 
@@ -63,18 +68,30 @@ external_trial_id_to_internal_ordinal_map = get_external_trial_id_to_internal_or
 % Create a map of frame start offsets per plane. (This is key because
 % there's about 150 ms interval from first plane to first plane in a
 % volume.
-planes = size( cdata_raw{ 1 }, 5 );
+if(dt == 1)
+planes = size( cdata_raw{ 1 }, 4 );
 VPS = cdata_meta.volume_rate;
 frame_start_offsets_per_plane = generate_frame_start_offsets_per_plane( planes, b_rawdata, b_time );
 
 ref_imgs = generate_ref_imgs(cdata_raw);
+else
+VPS = cdata_meta.frame_rate;
+frame_start_offsets_per_plane = generate_frame_start_offsets_per_plane( 1, b_rawdata, b_time );
+ref_imgs = squeeze(mean(cdata_raw{ 1 }(1,:,:,:),4));
+end
 
 %% Display behavioral data
 display_avg_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
 
+%% Display single trial trajectories
+traj = get_single_trial_trajectories(sid, bdata_vel_time, bdata_vel);
+
+% display_single_trial_trajectories( sid, bdata_vel_time, traj, analysis_path );
+display_single_trial_trajectories_v2( sid, bdata_vel_time, traj, analysis_path );
+
 %% Display behavioral data
 %datapath_tmp = '/data/drive0/sasha/160211_nsyb_83blexA_11/';
-datapath_tmp = '/data/drive0/sasha/160229_nsyb_83blexA_27/';
+datapath_tmp = '/data/drive0/sasha/160421_reachr_R73B12_03/';
 
 analysis_path_tmp = [datapath_tmp slash 'analysis'];
 
@@ -82,21 +99,25 @@ if(~exist(analysis_path_tmp, 'dir'))
     mkdir(analysis_path_tmp);
 end
 
-sid_tmp = [0];
-trial_type_cnt_tmp = 2;
+sid_tmp = [ 0 ];
+trial_type_cnt_tmp = 1;
 
 bdata_path_tmp = [datapath_tmp  slash 'ball' slash ];
 tic; [ b_rawdata_tmp, b_time_tmp, btrial_meta_tmp ] = load_behavioral_data(sid_tmp, bdata_path_tmp, trial_type_cnt_tmp ); toc
 
 [bdata_vel_time_tmp, bdata_vel_tmp] = reformat_raw_behavioral_data( b_time_tmp, b_rawdata_tmp );
 
-% display_avg_velocity(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
-% display_avg_velocity_exclude_zero_vel(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
-
-display_avg_velocity_exclude_zero_vel_RL_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
-display_avg_velocity_left_right_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
-display_per_trial_velocity(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
-
+if( trial_type_cnt_tmp == 3 )
+    display_avg_velocity(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
+    display_avg_velocity_exclude_zero_vel(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp); 
+elseif( trial_type_cnt_tmp == 2 )
+    display_avg_velocity_exclude_zero_vel_RL_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);    
+    display_avg_velocity_left_right_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
+    display_per_trial_velocity(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
+elseif( trial_type_cnt_tmp == 1 )
+    display_avg_velocity_exclude_zero_vel_one_side_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);    
+    display_avg_velocity_one_side_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
+end
 %%
 display_avg_velocity_exclude_zero_vel_RL_only(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
 display_avg_velocity_left_right_only(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
@@ -111,17 +132,15 @@ clust = generate_turning_clusters( sid, bdata_vel_time, bdata_vel, analysis_path
 
 generate_turning_magnitude_vs_bilateral_calcium_delta_response_plot( bdata_vel_time, bdata_vel, cdata_raw, frame_start_offsets_per_plane, VPS, analysis_path );
 
-
-%% Generate expected vs. ignored
+%% Generate turning metadata
 
 turn_metadata = generate_turning_metadata( sid, bdata_vel_time, bdata_vel, analysis_path );
 
+%% Generate expected vs. ignored
 % [ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list( bdata_vel_time, bdata_vel );
 [ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list_v2( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path );
 
 %% Generate large vs. small counter turn
-
-turn_metadata = generate_turning_metadata( sid, bdata_vel_time, bdata_vel, analysis_path );
 
 [ condition_trials, condition_trials_str, condition_str ] = generate_large_vs_small_turn_trial_list( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path )
 
@@ -144,13 +163,19 @@ turn_metadata = generate_turning_metadata( sid, bdata_vel_time, bdata_vel, analy
 %% Display behavioral 2 condition trials.
 
 %condition_trials{2}(2) = 14;
-
+asid = 0;
 avg_cond_btrace_trace_filepath = [ analysis_path '/' condition_str '_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 with_single_trials = 1;
 display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
 
 with_single_trials = 0;
-display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
+display_two_condition_trials_avg( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
+
+%% Display trial running trajectories for each analysis condition
+
+traj = get_single_trial_trajectories(sid, bdata_vel_time, bdata_vel);
+
+display_two_condition_single_trial_trajectories( sid, condition_trials, condition_trials_str, bdata_vel_time, traj, analysis_path );
 
 %% Get covariance plots from 2 symmetric ROIs
 ac = get_analysis_constants();
@@ -165,7 +190,12 @@ rois_1 = get_rois_from_volume( PLANE_OF_INTEREST, squeeze(cdata_raw{ 1 }(1,:,:,:
 generate_df_f_delta_vs_turning_magnitude_trial_plot( sid, rois_1, PLANE_OF_INTEREST, cdata_raw, turn_metadata, frame_start_offsets_per_plane, VPS, btrial_meta, analysis_path );
 
 %% Create a differece image for each plane
-tic; [ btraces_per_condition, avg_df_f_per_condition_per_plane ] = collect_two_behavioral_condition_and_df_f_per_cond( condition_trials, cdata_raw, bdata_vel, VPS, trial_exclusion_list, btrial_meta ); toc;
+if (dt == 1 )
+    tic; [ btraces_per_condition, avg_df_f_per_condition_per_plane ] = collect_two_behavioral_condition_and_df_f_per_cond( condition_trials, cdata_raw, bdata_vel, VPS, trial_exclusion_list, btrial_meta ); toc;
+else
+    FPS = VPS/dt;
+    tic; [ btraces_per_condition, avg_df_f_per_condition_per_plane ] = collect_two_behavioral_condition_and_df_f_per_cond_single_plane( condition_trials, cdata_raw, bdata_vel, FPS, trial_exclusion_list, btrial_meta ); toc;
+end
 
 %%
 a_const = get_analysis_constants;
@@ -188,13 +218,34 @@ display_two_condition_difference_image(down_params, ref_imgs, condition_trials_s
 
 ac = get_analysis_constants();
 
-roi_session = 19;
-PLANE_OF_INTEREST = 9;
+roi_session = 0;
+PLANE_OF_INTEREST = 8;
 TRIAL_TYPE_OF_INTEREST = ac.RIGHT;
-ref_img = mean(squeeze(cdata_raw{ 1 }(1,:,:,PLANE_OF_INTEREST,:)),3);
+ref_img = squeeze(mean(mean(squeeze(cdata_raw{ 1 }(1:5,:,:,PLANE_OF_INTEREST,:)),4),1));
 
-diff_image_path = [ analysis_path '/' condition_str '_diff_image_asid_' num2str( asid ) '_sid_' num2str(sid) '_roi_session_' num2str(roi_session) ];
+diff_image_path = [ analysis_path '/' condition_str '_sid_' num2str(sid) '_plane_' num2str(PLANE_OF_INTEREST) '_roi_session_' num2str(roi_session) ];
 clicky_two_condition_bdata(ref_img, PLANE_OF_INTEREST, TRIAL_TYPE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
+
+%% Clicky showing avg data for 2 conditionsquick, version 2
+ac = get_analysis_constants();
+
+roi_session = 10;
+PLANE_OF_INTEREST = 10;
+ref_img = squeeze(mean(mean(squeeze(cdata_raw{ 3 }(1:5,:,:,PLANE_OF_INTEREST,:)),4),1));
+
+diff_image_path = [ analysis_path '/' condition_str '_tc_left_right_asid_' num2str( asid ) '_sid_' num2str(sid) '_roi_session_' num2str(roi_session) ];
+clicky_two_condition_bdata_v2(ref_img, PLANE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
+
+%% SINGLE PLANE version
+ac = get_analysis_constants();
+
+roi_session = 1;
+TRIAL_TYPE_OF_INTEREST = ac.RIGHT;
+ref_img = squeeze(mean(mean(cdata_raw{ 1 }(1:5,:,:,:),4),1));
+
+diff_image_path = [ analysis_path '/' condition_str '_diff_image_sid_' num2str(sid) '_roi_session_' num2str(roi_session) ];
+FPS  = VPS / dt;
+clicky_two_condition_bdata_single_plane(ref_img, TRIAL_TYPE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, FPS, diff_image_path );
 
 %% Testing new unsupervised comparison of clustered data
 roi_session = 0;
@@ -233,26 +284,10 @@ tic; [ btraces_per_condition, ctraces_in_roi_per_condition ] = collect_two_behav
 
 avg_trace_filepath = [ analysis_path '/' condition_str '_avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 display_two_behavioral_condition_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, frame_start_offsets_per_plane, VPS, avg_trace_filepath );
-
+    
 diff_avg_trace_filepath = [ analysis_path '/' condition_str '_avg_diff_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 display_two_behavioral_condition_diff_traces( condition_trials_str, btraces_per_condition, ctraces_in_roi_per_condition, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_avg_trace_filepath );
-[bdata_vel_time, bdata_vel] = reformat_raw_behavioral_data( b_time, b_rawdata );
 
-settings = sensor_settings;
-global file_writer_cnt;
-file_writer_cnt = 1;
-
-% Create the reverse mapping from 
-external_trial_id_to_internal_ordinal_map = get_external_trial_id_to_internal_ordinal_map(btrial_meta);
-
-% Create a map of frame start offsets per plane. (This is key because
-% there's about 150 ms interval from first plane to first plane in a
-% volume.
-planes = size( cdata_raw{ 1 }, 5 );
-VPS = cdata_meta.volume_rate;
-frame_start_offsets_per_plane = generate_frame_start_offsets_per_plane( planes, b_rawdata, b_time );
-
-ref_imgs = generate_ref_imgs(cdata_raw);
 %% Generate time courses for each plane, using the ROIs of a session
 
 cur_bdata_vel = squeeze(bdata_vel{ cur_trial_type }( trial_ord,:,: ));
@@ -271,6 +306,7 @@ rois = get_rois_from_volume_v2( asid, squeeze(cdata_raw{ 1 }(1,:,:,:,:,:)), anal
 
 a_const = get_analysis_constants;
 cur_trial_type = a_const.RIGHT;
+cur_trial_type_str = a_const.task_str{ cur_trial_type };
 trial_ord = 4;
 
 cur_cdata     = squeeze(cdata_raw{ cur_trial_type }(trial_ord,:,:,:,:,:));
@@ -278,6 +314,17 @@ cur_trial_id = squeeze(btrial_meta{ cur_trial_type }(trial_ord, 2));
 
 cur_tbt_filename_prefix = [ analysis_path '/roi_avg_volume_asid_' num2str(asid) '_sid_' num2str(sid) '_' cur_trial_type_str '_tid_' num2str(cur_trial_id)];
 generate_volume_avg_with_rois( cur_cdata, rois, cur_tbt_filename_prefix );
+
+%% Generate trial_by_trial data for single plane imaging runs
+
+asid = 0; % roi analysis session id
+
+rois = get_rois_from_single_plane( asid, squeeze(cdata_raw{ 1 }(1,:,:,:)), analysis_path );
+
+FPS = cdata_meta.frame_rate / dt;
+
+tic; generate_tt_trial_single_plane( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, FPS, analysis_path, rois ); toc;
+
 
 %% Generate trial_by_trial data
 VPS = cdata_meta.volume_rate;
@@ -305,7 +352,6 @@ figsave_prefix = [analysis_path '/clicky_with_behaviour_' cur_trial_type_str '_t
 
 VPS = cdata_meta.volume_rate;
 clicky_with_behaviour( cur_plane_cdata, cur_bdata_vel, bdata_vel_time, VPS, settings, figsave_prefix );
-
 
 
 %% Play movie on a trial
@@ -501,3 +547,29 @@ end
 
 cdata_mat_path = [datamat_path '/cdata_all.mat'];
 tic; savefast(cdata_mat_path, 'cdata_raw', 'cdata_meta', 'ctrial_meta'); toc
+
+%% Generate stack
+%stack_files = {'stack_00001.tif', 'stack_00002.tif', 'stack_00003.tif'};
+
+%stack_files = {'stack_00004.tif', 'stack_00005.tif', 'stack_00006.tif'};
+stack_files = {'stack_00004.tif'};
+stack_path = [analysis_path '/medial_brain_stack'];
+
+for s = 1:length(stack_files)
+    cur_path = [datapath '/2p/' stack_files{ s }];
+    cur_stack = generate_stack_movie( cur_path );    
+    if( s == 1 )
+        stack = cur_stack;
+    else
+        stack = stack + cur_stack;
+    end
+    
+    disp(['Loaded stack: ' cur_path]);
+end
+
+%%% Display stack
+channel = 1;
+display_stack( channel, stack, stack_path );
+
+channel = 2;
+display_stack( channel, stack, stack_path );

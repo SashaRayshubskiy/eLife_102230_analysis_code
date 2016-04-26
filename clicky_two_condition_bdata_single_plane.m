@@ -1,4 +1,4 @@
-function clicky_two_condition_bdata( ref_img, PLANE_OF_INTEREST, TRIAL_TYPE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets, VPS, filename_prefix )
+function clicky_two_condition_bdata_single_plane( ref_img, TRIAL_TYPE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, FPS, filename_prefix )
 
 ac = get_analysis_constants;
 settings = sensor_settings;
@@ -17,7 +17,7 @@ y_size = size(avg_df_f_per_condition_per_plane, 5);
 nframes = size(avg_df_f_per_condition_per_plane, 6);
 
 t = zeros(1,nframes,'double');
-t = (([0:nframes-1]))./VPS + frame_start_offsets(PLANE_OF_INTEREST);
+t = ([1:nframes])./FPS; 
 
 npts = 1;
 colorindex = 0;
@@ -30,7 +30,7 @@ baseline_start = 0;
 baseline_end = 2.8;
 
 trial_type = TRIAL_TYPE_OF_INTEREST;
-p = PLANE_OF_INTEREST;
+p = 1;
 
 f1 = figure();
                
@@ -57,7 +57,7 @@ ref_img_mask = get_dead_pixel_mask(ref_img);
 imagesc( ref_img );
 colormap(ax1, 'gray');
 axis image;
-caxis([0 900]);
+caxis([0 300]);
 title([ac.task_str{trial_type}]);
 
 ax2 = subplot(2,2,2);
@@ -102,7 +102,7 @@ while(npts > 0)
     
     %bline_s = floor(baseline_start*VPS);
     bline_s = 1;
-    bline_e = floor(baseline_end*VPS);
+    bline_e = floor(baseline_end*FPS);
     
     itrace_1 = squeeze(sum(sum(double(a_data_1).*repmat(inpoly, [1, 1, nframes]))))/sum(inpoly(:));
     itrace_2 = squeeze(sum(sum(double(a_data_2).*repmat(inpoly, [1, 1, nframes]))))/sum(inpoly(:));
@@ -114,7 +114,7 @@ while(npts > 0)
     plt_cond_2(end+1) = plot( cur_t, itrace_2, 'Color', currcolor, 'LineWidth', 2, 'LineStyle', '--');
     
     xlim([0 max(cur_t)]);
-    ylim([-0.2 0.75]);
+    %ylim([-0.2 0.75]);
     xlabel('Time (s)', 'FontSize', 14, 'FontWeight', 'bold');
     ylabel('dF/F');
     set(gca, 'FontSize', 14 );

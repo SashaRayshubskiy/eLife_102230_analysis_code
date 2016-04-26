@@ -28,7 +28,7 @@ yaw_freq_cutoff = 3.0; % Hz
 
 for trial_type = 1:trial_cnt    
     
-    subplot(2,1,trial_type);
+    subplot(3,1,trial_type);
         
     yaw_data = squeeze(bdata_vel{ trial_type }( :, ac.VEL_YAW, : ));
     

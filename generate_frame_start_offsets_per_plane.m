@@ -11,7 +11,7 @@ frame_clock     = squeeze(one_trial_bdata(:,5));
 FSTATE_HIGH = 1;
 FSTATE_LOW = 2; 
 cur_state = FSTATE_LOW;
-FRAME_STATE_CHANGE_THRESHOLD = 2.0;
+FRAME_STATE_CHANGE_THRESHOLD = 0.5;
 
 frame_begins_t = [];
 frame_ends_t = [];

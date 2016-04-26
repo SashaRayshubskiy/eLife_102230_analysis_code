@@ -42,7 +42,7 @@ for sid = sids
         
         trial_type_idx = -1;
 
-        if(strcmp(trial_type, 'LeftOdor') == 1)
+        if((strcmp(trial_type, 'LeftOdor') == 1) | (strcmp(trial_type, '2pStim') == 1) )
             trial_type_idx = 1;        
         elseif(strcmp(trial_type, 'RightOdor') == 1)
             trial_type_idx = 2;

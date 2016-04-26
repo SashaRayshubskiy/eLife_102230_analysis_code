@@ -1,4 +1,4 @@
-function [ cdata_raw, cdata_meta, trial_metadata ] = load_imaging_data( sids, datapath, trial_type_cnt, dx, dy, dt )
+function [ cdata_raw, cdata_meta, trial_metadata ] = load_imaging_data_single_plane( sids, datapath, trial_type_cnt, dx, dy, dt )
 
 % Inputs:
 % sids - array or a single SID of the trials to load
@@ -55,13 +55,15 @@ for sid = sids
         end
         
         load_path = [ datapath slash filename ];
-        raw_data = open_tif_fast( load_path );
+        raw_data = open_tif_fast_single_plane( load_path );
  
         x_size = size(raw_data, 1);
         y_size = size(raw_data, 2);
-        t_size = size(raw_data, 5);
+        t_size = size(raw_data, 4);
 
-        raw_d_down = squeeze(mean(mean(mean(reshape(raw_data, [dx, x_size/dx, dy, y_size/dy, size( raw_data, 3), size(raw_data,4), dt, t_size/dt ]), 7),3),1));
+        t_size_new = t_size - mod(t_size,dt);
+
+        raw_d_down = squeeze(mean(mean(mean(reshape(raw_data(:,:,1:t_size_new), [dx, x_size/dx, dy, y_size/dy, dt, t_size_new/dt ]), 5),3),1));
         
         disp(['Loaded file: ' load_path]);
         
@@ -97,7 +99,7 @@ for i=1:trial_type_cnt
             return;
         end
                
-        cur_bdata( j, :, :, :, :, : ) = cdata_not_sorted_helper{i}{rid,2};
+        cur_bdata( j, :, :, 1:size(cdata_not_sorted_helper{i}{rid,2},3) ) = cdata_not_sorted_helper{i}{rid,2};
         trial_metadata{ i }( j, : ) = cdata_sorted{i}(j,1:2);
     end
     
@@ -116,7 +118,7 @@ tifObj = Tiff(tifpath,'r');
 
 frameString = tifObj.getTag('ImageDescription');
 cdata_meta.frame_rate = si51_frame_string_get_value_for_key(frameString, 'hRoiManager.scanFrameRate');
-cdata_meta.volume_rate = 1.0/si51_frame_string_get_value_for_key(frameString, 'hFastZ.period');
+% cdata_meta.volume_rate = 1.0/si51_frame_string_get_value_for_key(frameString, 'hFastZ.period');
 
 tifObj.close();
 

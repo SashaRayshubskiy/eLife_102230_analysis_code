@@ -20,9 +20,9 @@ mean_both_vel_fwd = squeeze(mean(bdata_vel{ac.BOTH}(:,ac.VEL_FWD,:)));
 
 SHOW_SEM = 1;
 if( SHOW_SEM )
-    sem_left_vel_fwd = squeeze(std(bdata_vel{ac.LEFT}(:,ac.VEL_FWD,:),1)) ./ sqrt(size(bdata_vel{ ac.LEFT }(:,ac.VEL_FWD,:),3));
-    sem_right_vel_fwd = squeeze(std(bdata_vel{ac.RIGHT}(:,ac.VEL_FWD,:),1)) ./ sqrt(size(bdata_vel{ ac.RIGHT }(:,ac.VEL_FWD,:),3));
-    sem_both_vel_fwd = squeeze(std(bdata_vel{ac.BOTH}(:,ac.VEL_FWD,:),1)) ./ sqrt(size(bdata_vel{ ac.BOTH }(:,ac.VEL_FWD,:),3));
+    sem_left_vel_fwd = squeeze(std(bdata_vel{ac.LEFT}(:,ac.VEL_FWD,:),1)) ./ sqrt(size(bdata_vel{ ac.LEFT }(:,ac.VEL_FWD,:),1));
+    sem_right_vel_fwd = squeeze(std(bdata_vel{ac.RIGHT}(:,ac.VEL_FWD,:),1)) ./ sqrt(size(bdata_vel{ ac.RIGHT }(:,ac.VEL_FWD,:),1));
+    sem_both_vel_fwd = squeeze(std(bdata_vel{ac.BOTH}(:,ac.VEL_FWD,:),1)) ./ sqrt(size(bdata_vel{ ac.BOTH }(:,ac.VEL_FWD,:),1));
 else
     sem_left_vel_fwd = squeeze(std(bdata_vel{ac.LEFT}(:,ac.VEL_FWD,:),1));
     sem_right_vel_fwd = squeeze(std(bdata_vel{ac.RIGHT}(:,ac.VEL_FWD,:),1));
@@ -69,9 +69,9 @@ mean_left_vel_side = squeeze(mean(bdata_vel{ac.LEFT}(:,ac.VEL_SIDE,:)));
 mean_right_vel_side = squeeze(mean(bdata_vel{ac.RIGHT}(:,ac.VEL_SIDE,:)));
 mean_both_vel_side = squeeze(mean(bdata_vel{ac.BOTH}(:,ac.VEL_SIDE,:)));
 
-sem_left_vel_side = squeeze(std(bdata_vel{ac.LEFT}(:,ac.VEL_SIDE,:),1)) ./ sqrt(size(bdata_vel{ ac.LEFT }(:,ac.VEL_SIDE,:),3));
-sem_right_vel_side = squeeze(std(bdata_vel{ac.RIGHT}(:,ac.VEL_SIDE,:),1)) ./ sqrt(size(bdata_vel{ ac.RIGHT }(:,ac.VEL_SIDE,:),3));
-sem_both_vel_side = squeeze(std(bdata_vel{ac.BOTH}(:,ac.VEL_SIDE,:),1)) ./ sqrt(size(bdata_vel{ ac.BOTH }(:,ac.VEL_SIDE,:),3));
+sem_left_vel_side = squeeze(std(bdata_vel{ac.LEFT}(:,ac.VEL_SIDE,:),1)) ./ sqrt(size(bdata_vel{ ac.LEFT }(:,ac.VEL_SIDE,:),1));
+sem_right_vel_side = squeeze(std(bdata_vel{ac.RIGHT}(:,ac.VEL_SIDE,:),1)) ./ sqrt(size(bdata_vel{ ac.RIGHT }(:,ac.VEL_SIDE,:),1));
+sem_both_vel_side = squeeze(std(bdata_vel{ac.BOTH}(:,ac.VEL_SIDE,:),1)) ./ sqrt(size(bdata_vel{ ac.BOTH }(:,ac.VEL_SIDE,:),1));
 
 fh = fill( [bdata_vel_time, fliplr(bdata_vel_time)], ... 
         [(mean_left_vel_side+sem_left_vel_side)' fliplr((mean_left_vel_side-sem_left_vel_side)')], ...
@@ -111,9 +111,9 @@ mean_left_vel_yaw = squeeze(mean(bdata_vel{ac.LEFT}(:,ac.VEL_YAW,:)));
 mean_right_vel_yaw = squeeze(mean(bdata_vel{ac.RIGHT}(:,ac.VEL_YAW,:)));
 mean_both_vel_yaw = squeeze(mean(bdata_vel{ac.BOTH}(:,ac.VEL_YAW,:)));
 
-sem_left_vel_yaw = squeeze(std(bdata_vel{ac.LEFT}(:,ac.VEL_YAW,:),1)) ./ sqrt(size(bdata_vel{ ac.LEFT }(:,ac.VEL_YAW,:),3));
-sem_right_vel_yaw = squeeze(std(bdata_vel{ac.RIGHT}(:,ac.VEL_YAW,:),1)) ./ sqrt(size(bdata_vel{ ac.RIGHT }(:,ac.VEL_YAW,:),3));
-sem_both_vel_yaw = squeeze(std(bdata_vel{ac.BOTH}(:,ac.VEL_YAW,:),1)) ./ sqrt(size(bdata_vel{ ac.BOTH }(:,ac.VEL_YAW,:),3));
+sem_left_vel_yaw = squeeze(std(bdata_vel{ac.LEFT}(:,ac.VEL_YAW,:),1)) ./ sqrt(size(bdata_vel{ ac.LEFT }(:,ac.VEL_YAW,:),1));
+sem_right_vel_yaw = squeeze(std(bdata_vel{ac.RIGHT}(:,ac.VEL_YAW,:),1)) ./ sqrt(size(bdata_vel{ ac.RIGHT }(:,ac.VEL_YAW,:),1));
+sem_both_vel_yaw = squeeze(std(bdata_vel{ac.BOTH}(:,ac.VEL_YAW,:),1)) ./ sqrt(size(bdata_vel{ ac.BOTH }(:,ac.VEL_YAW,:),1));
 
 fh = fill( [bdata_vel_time, fliplr(bdata_vel_time)], ... 
         [(mean_left_vel_yaw+sem_left_vel_yaw)' fliplr((mean_left_vel_yaw-sem_left_vel_yaw)')], ...

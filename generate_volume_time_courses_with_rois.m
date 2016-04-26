@@ -23,11 +23,11 @@ end
 
 prestim = settings.pre_stim;
 stim    = settings.stim;
-poststim    = settings.post_stim;
 
 base_begin = 1;
 base_end = floor(prestim*VPS);
 
+poststim    = settings.post_stim;
 total_time = prestim + stim + poststim;
 
 first_stim_t = prestim;

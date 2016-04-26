@@ -17,7 +17,7 @@ for i=1:PLANES
     % Throw away the first few volumes due to settling time.
     imagesc([1:y_size*down_params(2)], [1:x_size*down_params(1)], mean(squeeze(cdata(:,:,i,3:end)),3));
     colormap gray;
-    caxis([0 4000]);
+    caxis([0 500]);
     axis image;
     axis off;
 end

@@ -1,4 +1,4 @@
-function display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, filepath_prefix, with_single_trials )
+function display_two_condition_trials_avg( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, filepath_prefix, with_single_trials )
 
 SPACING = 0.01;
 PADDING = 0;
@@ -18,7 +18,8 @@ last_stim_t = stim + prestim;
 f = figure('units','normalized','outerposition',[0 0 1 1]);
 
 %for trial_type = 1:size(condition_trials,1)
-for trial_type = [1:2]
+for trial_type = 1:2
+%for trial_type = [2 3]
     for cond_ord = [2 1]        
 
         cur_cond_symbol = '-';              
@@ -26,7 +27,7 @@ for trial_type = [1:2]
         if(cond_ord == 1)
             if( trial_type == ac.BOTH )
                 cur_color_avg = rgb('DimGray');
-                cur_color_single = rgb('DarkGray');                                        
+                cur_color_single = rgb('Silver');                                        
             elseif( trial_type == ac.LEFT )
                 cur_color_avg = rgb('FireBrick');
                 cur_color_single = rgb('LightSalmon');                            
@@ -39,8 +40,7 @@ for trial_type = [1:2]
             cur_color_single = rgb('DarkGray');                                                    
         end
         
-        %subaxis( 3, 1, trial_type, 'Spacing', SPACING, 'Padding', PADDING, 'Margin', MARGIN );
-       subplot( 2, 1, trial_type );
+        subplot( 2, 1, trial_type );
         
         hold on;
         
@@ -53,19 +53,18 @@ for trial_type = [1:2]
             fwd_trace = squeeze(bdata_vel{trial_type}( cur_trial, ac.VEL_FWD, :));
 
             yaw_traces(end+1,:) = yaw_trace;
-            fwd_traces(end+1,:) = fwd_trace;
-            
-            if( with_single_trials )
-                plot( bdata_vel_time, yaw_trace', 'color', cur_color_single, 'LineStyle', cur_cond_symbol, 'LineWidth', 0.5 );
-            end
-            %plot( bdata_vel_time, fwd_trace', 'color', rgb('PaleGreen'), 'LineStyle', cur_cond_symbol, 'LineWidth', 0.5 );      
-        
+            fwd_traces(end+1,:) = fwd_trace;                    
         end
         
         % Plot average trial
         avg_yaw_trace = mean( yaw_traces );
-        avg_fwd_trace = mean( fwd_traces );
-        %phdl(cond_ord,1) = plot( bdata_vel_time, avg_fwd_trace, 'color', rgb('SeaGreen'), 'LineStyle', cur_cond_symbol, 'LineWidth', 2.0 );              
+        sem_yaw_trace = std( yaw_traces, 1 ) ./ sqrt( size(yaw_traces,1) );        
+        
+        fh = fill( [bdata_vel_time, fliplr(bdata_vel_time)], ... 
+        [(avg_yaw_trace+sem_yaw_trace) fliplr((avg_yaw_trace-sem_yaw_trace))], ...
+        cur_color_single);
+        set(fh, 'EdgeColor', 'None');
+        
         phdl(cond_ord,1) = plot( bdata_vel_time, avg_yaw_trace, 'color', cur_color_avg, 'LineStyle', cur_cond_symbol, 'LineWidth', 2.0 );
         
         traces_cnt(cond_ord) = size(yaw_traces,1);
@@ -77,7 +76,7 @@ for trial_type = [1:2]
             set(ll, 'Interpreter', 'none');
         end
         
-        ylim([-0.5 0.5]);
+        ylim([-0.15 0.15]);
         yy = ylim;
         y_min = yy(1)-yy(1)*0.01; y_max = yy(2);
         hh = fill([ first_stim_t first_stim_t last_stim_t last_stim_t ],[y_min y_max y_max y_min ], rgb('Wheat'));
@@ -85,7 +84,7 @@ for trial_type = [1:2]
         set(hh, 'EdgeColor', 'None');
         
         xlim([0, total_time]);
-        if( trial_type == 3 )
+        if( trial_type == size(condition_trials,1) )
             xlabel('Time (s)');
         else
             set(gca(), 'XTickLabels', '');
@@ -98,13 +97,8 @@ for trial_type = [1:2]
     end
 end
 
-if( with_single_trials )
-    saveas(f, [ filepath_prefix '_single_t.fig']);
-    saveas(f, [ filepath_prefix '_single_t.png']);
-else
-    saveas(f, [ filepath_prefix '.fig']);
-    saveas(f, [ filepath_prefix '.png']);
-end
+saveas(f, [ filepath_prefix '.fig']);
+saveas(f, [ filepath_prefix '.png']);
 
 end
 

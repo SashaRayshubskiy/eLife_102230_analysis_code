@@ -37,11 +37,11 @@ for p=1:PLANES
     t(p,:) = (([0:nframes-1]))./VPS + frame_start_offsets(p);
 end
 
-for trial_type = 1:size( btraces_per_condition, 2 )
+for trial_type = 1:size( btraces_per_condition, 1 )
         
     f = figure('units','normalized','outerposition',[0 0 1 1]);
         
-    for cond_ord = 1:size( btraces_per_condition, 1 )
+    for cond_ord = 1:size( btraces_per_condition, 2 )
         
         if(cond_ord == 1)
             cur_cond_symbol = '-';
