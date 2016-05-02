@@ -16,6 +16,7 @@ for s = 3:size(stack,4)-2
     title( ['chan(' num2str( channel ) '): frame - ' num2str( s ) ] );
 
     writeVideo(vid, getframe(f));
+    pause(0.1);    
 end
 
 close(vid);

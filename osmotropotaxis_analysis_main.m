@@ -20,7 +20,7 @@ end
 %trial_exclusion_list = nsyb_83blexA_01_blank_trials;
 trial_exclusion_list = {[],[],[]};
 
-datapath = '/data/drive0/sasha/160420_opGCaMP6s_83blexA_R11B11_02/';
+datapath = '/data/drive0/sasha/160501_gcamp6f_R13G10_01/';
 
 analysis_path = [datapath slash 'analysis'];
 
@@ -91,7 +91,7 @@ display_single_trial_trajectories_v2( sid, bdata_vel_time, traj, analysis_path )
 
 %% Display behavioral data
 %datapath_tmp = '/data/drive0/sasha/160211_nsyb_83blexA_11/';
-datapath_tmp = '/data/drive0/sasha/160421_reachr_R73B12_03/';
+datapath_tmp = '/data/drive0/sasha/160428_reachr_R73B12_04/';
 
 analysis_path_tmp = [datapath_tmp slash 'analysis'];
 
@@ -218,12 +218,12 @@ display_two_condition_difference_image(down_params, ref_imgs, condition_trials_s
 
 ac = get_analysis_constants();
 
-roi_session = 0;
-PLANE_OF_INTEREST = 8;
+roi_session = 1;
+PLANE_OF_INTEREST = 4;
 TRIAL_TYPE_OF_INTEREST = ac.RIGHT;
 ref_img = squeeze(mean(mean(squeeze(cdata_raw{ 1 }(1:5,:,:,PLANE_OF_INTEREST,:)),4),1));
 
-diff_image_path = [ analysis_path '/' condition_str '_sid_' num2str(sid) '_plane_' num2str(PLANE_OF_INTEREST) '_roi_session_' num2str(roi_session) ];
+diff_image_path = [ analysis_path '/' condition_str '_sid_' num2str(sid) '_plane_' num2str(PLANE_OF_INTEREST) '_side_' num2str(TRIAL_TYPE_OF_INTEREST) '_roi_session_' num2str(roi_session) ];
 clicky_two_condition_bdata(ref_img, PLANE_OF_INTEREST, TRIAL_TYPE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
 
 %% Clicky showing avg data for 2 conditionsquick, version 2
@@ -573,3 +573,12 @@ display_stack( channel, stack, stack_path );
 
 channel = 2;
 display_stack( channel, stack, stack_path );
+
+%%
+cur_path = '/data/drive0/sasha/160426_nsyb_83blexA_new_orientation_01/';
+stack_path = [ cur_path 'stack_00001.tif' ];
+
+stack = generate_stack_movie( stack_path );
+
+stack_save_path = [cur_path 'stack_'];
+display_stack_one_chan(stack, stack_save_path );

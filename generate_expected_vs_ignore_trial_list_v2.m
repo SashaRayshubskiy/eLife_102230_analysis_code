@@ -50,7 +50,7 @@ for trial_type = 1:trial_cnt
         avg_fwd_vel = mean( fwd_vel );
         
         if 1
-        if( avg_fwd_vel < FWD_VELOCITY_THRESHOLD )
+        if( abs(avg_fwd_vel) < FWD_VELOCITY_THRESHOLD )
             continue;
         end
         
