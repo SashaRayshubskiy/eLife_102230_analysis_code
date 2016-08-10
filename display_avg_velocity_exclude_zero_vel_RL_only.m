@@ -5,8 +5,11 @@ settings = sensor_settings;
 
 one_trial_bdata = squeeze(bdata_raw{ ac.LEFT}(1,:,:));
 left_odor_stim  = squeeze(one_trial_bdata(:,7));
-first_stim = find((left_odor_stim > 2.0), 1, 'first') ./ settings.sampRate;
-last_stim = find((left_odor_stim > 2.0), 1, 'last') ./ settings.sampRate;
+first_stim = find((left_odor_stim > 0.5), 1, 'first') ./ settings.sampRate;
+last_stim = find((left_odor_stim > 0.5), 1, 'last') ./ settings.sampRate;
+
+first_stim = settings.pre_stim;
+last_stim = settings.pre_stim+settings.stim;
 
 kept_trials = {[], [], []};
 FWD_VEL_THRESH = 0.001;

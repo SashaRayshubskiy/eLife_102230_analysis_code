@@ -7,11 +7,15 @@ f = figure;
 
 one_trial_bdata = squeeze(bdata_raw{ ac.LEFT}(1,:,:));
 left_odor_stim  = squeeze(one_trial_bdata(:,7));
-first_stim = find((left_odor_stim > 2.0), 1, 'first') ./ settings.sampRate;
-last_stim = find((left_odor_stim > 2.0), 1, 'last') ./ settings.sampRate;
+first_stim = find((left_odor_stim > 0.5), 1, 'first') ./ settings.sampRate;
+last_stim = find((left_odor_stim > 0.5), 1, 'last') ./ settings.sampRate;
+
+first_stim = settings.pre_stim;
+last_stim = settings.pre_stim+settings.stim;
 
 pre_stim_t = find(bdata_vel_time < first_stim);
 stim_t = find((bdata_vel_time >= first_stim) & (bdata_vel_time <= last_stim));
+
 
 for trial_type = 1:length(bdata_vel)
     subplot(length(bdata_vel),1,trial_type);

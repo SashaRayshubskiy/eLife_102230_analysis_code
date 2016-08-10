@@ -5,6 +5,7 @@ settings = sensor_settings;
 
 prestim = settings.pre_stim;
 stim    = settings.stim;
+%stim    = 1.0;
 poststim    = settings.post_stim;
 
 total_time = prestim + stim + poststim;
@@ -57,11 +58,12 @@ ref_img_mask = get_dead_pixel_mask(ref_img);
 imagesc( ref_img );
 colormap(ax1, 'gray');
 axis image;
-caxis([0 900]);
+caxis([0 300]);
 title([ac.task_str{trial_type}]);
 
 ax2 = subplot(2,2,2);
 imagesc(avg_df_f_img_cond_1.*ref_img_mask);
+%imagesc(avg_df_f_img_cond_1);
 axis image;
 colormap(ax2, 'jet');
 caxis([-0 0.5]);
@@ -70,6 +72,7 @@ set(tt, 'Interpreter', 'none');
 
 ax3 = subplot(2,2,4);
 imagesc(avg_df_f_img_cond_2.*ref_img_mask);
+%imagesc(avg_df_f_img_cond_2);
 axis image;
 colormap(ax3, jet);
 caxis([-0 0.5]);
@@ -82,7 +85,7 @@ a_data_2 = cur_plane_avg_df_f_cond_2;
 plt_cond_1 = [];
 plt_cond_2 = [];
 
-clicky_plane = 1;
+clicky_plane = 2;
 while(npts > 0)
     
     subplot(2,2,clicky_plane);

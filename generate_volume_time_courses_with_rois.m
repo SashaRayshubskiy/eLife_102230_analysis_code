@@ -79,11 +79,11 @@ for p=1:PLANES
     
     if( PLANES == 16 )
         if(p>=1 & p<=8 )
-            ylim([-0.4 1.5]);
+            ylim([-1 1.5]);
         elseif (p>=9 & p<=12 )
-            ylim([-0.4 1.0]);
+            ylim([-1 1.5]);
         elseif (p>=13 & p<=16 )
-            ylim([-0.4 0.5]);
+            ylim([-1 1.5]);
         end
     elseif( PLANES == 8 ) 
         if(p>=1 & p<=4 )

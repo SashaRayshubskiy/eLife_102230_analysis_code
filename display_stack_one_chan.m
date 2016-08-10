@@ -8,7 +8,7 @@ open(vid);
 f = figure('units','normalized','outerposition',[0 0 1 1]);
 for s = 3:size(stack,3)-2
     
-    imagesc(squeeze(flipud(stack( :, :, s ))));
+    imagesc(squeeze(mean(stack( :, :, s-2:s+2 ),3)));
     axis image;
     colormap gray;
     caxis([0 7000]);

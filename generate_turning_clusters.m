@@ -9,7 +9,7 @@ stim    = settings.stim;
 trial_cnt = size( bdata_vel, 2 );
 
 %clust_period = find( (bdata_vel_time > (prestim-0.5)) & (bdata_vel_time < (prestim+stim+1.5)));
-clust_period = find( (bdata_vel_time > (prestim)) & (bdata_vel_time < (prestim+stim+1.5)));
+clust_period = find( (bdata_vel_time > (prestim-0.5)) & (bdata_vel_time < (prestim+stim+1.5)));
 t = bdata_vel_time(clust_period);
 
 f1 = figure();

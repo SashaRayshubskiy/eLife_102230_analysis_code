@@ -31,7 +31,7 @@ for i=1:PLANES
     %imagesc(imresize(ref_img, [xsize 2*ysize]));
     imagesc( ref_img );
     colormap gray;
-    caxis([0 1000]);
+    caxis([0 500]);
     axis image;
     axis off;
     
