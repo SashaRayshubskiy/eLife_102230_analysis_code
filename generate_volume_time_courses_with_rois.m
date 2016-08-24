@@ -59,7 +59,7 @@ for p=1:PLANES
         
         inpoly = inpolygon(x,y,xv,yv);
         
-        currcolor = order(1+mod(colorindex,size(order,1)),:);;
+        currcolor = order(1+mod(colorindex,size(order,1)),:);
         
         tmp = squeeze(sum(sum(cdata_in_plane .* repmat(inpoly, [1, 1, nframes])))) / sum(inpoly(:));
         baseline = repmat(mean(tmp(base_begin:base_end)), [1 1 size(tmp,2)]);
@@ -79,11 +79,11 @@ for p=1:PLANES
     
     if( PLANES == 16 )
         if(p>=1 & p<=8 )
-            ylim([-1 1.5]);
+            ylim([-1 2.5]);
         elseif (p>=9 & p<=12 )
-            ylim([-1 1.5]);
+            ylim([-1 2.5]);
         elseif (p>=13 & p<=16 )
-            ylim([-1 1.5]);
+            ylim([-1 2.5]);
         end
     elseif( PLANES == 8 ) 
         if(p>=1 & p<=4 )

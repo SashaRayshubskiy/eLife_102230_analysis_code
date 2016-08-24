@@ -9,6 +9,8 @@ prestim = settings.pre_stim;
 stim    = settings.stim;
 poststim    = settings.post_stim;
 
+poststim    = 7.5-prestim-stim;
+
 total_time = prestim + stim + poststim;
 
 trial_cnt = size( bdata_vel, 2 );

@@ -20,7 +20,8 @@ end
 %trial_exclusion_list = nsyb_83blexA_01_blank_trials;
 trial_exclusion_list = {[],[],[]};
 
-datapath = '/data/drive0/sasha/160730_op6s_VT040354_01/';
+%datapath = '/data/drive0/sasha/160818_op6s_VT025718__cell_bodies_01/';
+datapath = '/data/drive0/tots/160824_op6s_VT040354_01/';
 
 analysis_path = [datapath slash 'analysis'];
 
@@ -31,7 +32,7 @@ end
 sid = [ 0 ];
 
 aconstants = get_analysis_constants;
-trial_type_cnt = 2;
+trial_type_cnt = 3;
 
 % Load behavioral data
 bdata_path = [datapath  slash 'ball' slash ];
@@ -86,6 +87,7 @@ end
 
 %% Display behavioral data
 display_avg_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
+display_avg_velocity_exclude_zero_vel(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path ); 
 
 %% Display single trial trajectories
 traj = get_single_trial_trajectories(sid, bdata_vel_time, bdata_vel);
@@ -95,7 +97,7 @@ display_single_trial_trajectories_v2( sid, bdata_vel_time, traj, analysis_path )
 
 %% Display behavioral data
 %datapath_tmp = '/data/drive0/sasha//';
-datapath_tmp = '/data/drive0/sasha/160801_reachr_VT025718_13/';
+datapath_tmp = '/data/drive0/sasha/160818_op6s_VT025718__cell_bodies_01/';
 
 analysis_path_tmp = [datapath_tmp slash 'analysis'];
 
@@ -104,7 +106,7 @@ if(~exist(analysis_path_tmp, 'dir'))
 end
 
 sid_tmp = [ 0 ];
-trial_type_cnt_tmp = 1;
+trial_type_cnt_tmp = 2;
 
 bdata_path_tmp = [datapath_tmp  slash 'ball' slash ];
 tic; [ b_rawdata_tmp, b_time_tmp, btrial_meta_tmp ] = load_behavioral_data(sid_tmp, bdata_path_tmp, trial_type_cnt_tmp ); toc
@@ -143,13 +145,13 @@ display_per_trial_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_p
 %% Generate turning clusters using standard unsupervised clustering tools.
 MAX_CLUSTERS = 5;
 clust = generate_turning_clusters( sid, bdata_vel_time, bdata_vel, analysis_path, MAX_CLUSTERS );
-settings
 
 %% Test the idea that activation of 'LAL' turning region between the 2 sides corresponds to turn magnitude.
 
 generate_turning_magnitude_vs_bilateral_calcium_delta_response_plot( bdata_vel_time, bdata_vel, cdata_raw, frame_start_offsets_per_plane, VPS, analysis_path );
 
 %% Generate turning metadataum
+
 
 turn_metadata = generate_turning_metadata( sid, bdata_vel_time, bdata_vel, analysis_path );
 
@@ -180,7 +182,7 @@ turn_metadata = generate_turning_metadata( sid, bdata_vel_time, bdata_vel, analy
 %% Display behavioral 2 condition trials.
 
 %condition_trials{2}(2) = 14;
-asid = 0;
+asid= 0;
 avg_cond_btrace_trace_filepath = [ analysis_path '/' condition_str '_asid_' num2str( asid ) '_sid_' num2str(sid) ];
 with_single_trials = 1;
 display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
@@ -246,13 +248,23 @@ clicky_two_condition_bdata_8roi_LR(ref_img, PLANE_OF_INTEREST, condition_trials_
 
 ac = get_analysis_constants();
 
-roi_session = 3;
-PLANE_OF_INTEREST = 12;
+roi_session = 11;
+PLANE_OF_INTEREST = 9;
 TRIAL_TYPE_OF_INTEREST = ac.LEFT;
 ref_img = squeeze(mean(mean(squeeze(cdata_raw{ 1 }(40:45,:,:,PLANE_OF_INTEREST,:)),4),1));
 
 diff_image_path = [ analysis_path '/' condition_str '_sid_' num2str(sid) '_plane_' num2str(PLANE_OF_INTEREST) '_side_' num2str(TRIAL_TYPE_OF_INTEREST) '_roi_session_' num2str(roi_session) ];
 clicky_two_condition_bdata(ref_img, PLANE_OF_INTEREST, TRIAL_TYPE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
+
+%% Clicky showing both left and right trials
+ac = get_analysis_constants();
+
+roi_session = 2;
+PLANE_OF_INTEREST = 16;
+ref_img = squeeze(mean(mean(squeeze(cdata_raw{ 1 }(40:45,:,:,PLANE_OF_INTEREST,:)),4),1));
+
+diff_image_path = [ analysis_path '/' condition_str '_sid_' num2str(sid) '_plane_' num2str(PLANE_OF_INTEREST) '_both_sides_roi_session_' num2str(roi_session) ];
+clicky_two_condition_bdata_LR(ref_img, PLANE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
 
 %% Clicky showing avg data for 2 conditionsquick, version 2
 ac = get_analysis_constants();

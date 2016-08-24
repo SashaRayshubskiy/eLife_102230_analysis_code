@@ -1,4 +1,4 @@
-function clicky_two_condition_bdata( ref_img, PLANE_OF_INTEREST, TRIAL_TYPE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets, VPS, filename_prefix )
+function clicky_two_condition_bdata_LR( ref_img, PLANE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets, VPS, filename_prefix )
 
 ac = get_analysis_constants;
 settings = sensor_settings;
@@ -28,18 +28,24 @@ nroi = 1;
 intens = [];
 [x, y] = meshgrid(1:y_size, 1:x_size);
 baseline_start = 0;
-baseline_end = 2.8;
+baseline_end = 2.0;
 
-trial_type = TRIAL_TYPE_OF_INTEREST;
+trial_type = 1;
 p = PLANE_OF_INTEREST;
 
 f1 = figure();
-               
+
 cur_plane_avg_df_f_cond_1 = squeeze(avg_df_f_per_condition_per_plane(trial_type,1,p,:,:,:));
 cur_plane_avg_df_f_cond_1(~isfinite(cur_plane_avg_df_f_cond_1)) = 0.0;
 
 cur_plane_avg_df_f_cond_2 = squeeze(avg_df_f_per_condition_per_plane(trial_type,2,p,:,:,:));
 cur_plane_avg_df_f_cond_2(~isfinite(cur_plane_avg_df_f_cond_2)) = 0.0;
+
+cur_plane_avg_df_f_cond_1_R = squeeze(avg_df_f_per_condition_per_plane(2,1,p,:,:,:));
+cur_plane_avg_df_f_cond_1_R(~isfinite(cur_plane_avg_df_f_cond_1_R)) = 0.0;
+
+cur_plane_avg_df_f_cond_2_R = squeeze(avg_df_f_per_condition_per_plane(2,2,p,:,:,:));
+cur_plane_avg_df_f_cond_2_R(~isfinite(cur_plane_avg_df_f_cond_2_R)) = 0.0;
         
 cur_t = t;
 
@@ -53,8 +59,6 @@ ax1 = subplot(2,2,1);
 ref_img_mask = get_dead_pixel_mask(ref_img);
 
 [xsize, ysize] = size(ref_img);
-%imagesc(imresize(ref_img, [xsize 2*ysize]));
-%imagesc( ref_img.*ref_img_mask );
 imagesc( ref_img );
 colormap(ax1, 'gray');
 axis image;
@@ -70,20 +74,17 @@ caxis([-0 0.5]);
 tt = title(['Condition 1: ' condition_trials_str{1}]);
 set(tt, 'Interpreter', 'none');
 
-ax3 = subplot(2,2,4);
-imagesc(avg_df_f_img_cond_2.*ref_img_mask);
-%imagesc(avg_df_f_img_cond_2);
-axis image;
-colormap(ax3, jet);
-caxis([-0 0.5]);
-tt = title(['Condition 2: ' condition_trials_str{2}]);
-set(tt, 'Interpreter', 'none');
-    
 a_data_1 = cur_plane_avg_df_f_cond_1;
 a_data_2 = cur_plane_avg_df_f_cond_2;
 
+a_data_1_R = cur_plane_avg_df_f_cond_1_R;
+a_data_2_R = cur_plane_avg_df_f_cond_2_R;
+
 plt_cond_1 = [];
 plt_cond_2 = [];
+
+plt_cond_1_R = [];
+plt_cond_2_R = [];
 
 clicky_plane = 2;
 while(npts > 0)
@@ -117,11 +118,30 @@ while(npts > 0)
     plt_cond_2(end+1) = plot( cur_t, itrace_2, 'Color', currcolor, 'LineWidth', 2, 'LineStyle', '--');
     
     xlim([0 max(cur_t)]);
-    ylim([-0.2 0.75]);
+    ylim([-0.4 1.7]);
     xlabel('Time (s)', 'FontSize', 14, 'FontWeight', 'bold');
     ylabel('dF/F');
     set(gca, 'FontSize', 14 );
     set(gca, 'FontWeight', 'bold');
+    title('Left');
+
+
+    ax2 = subplot(2,2,4); % plot the trace
+    itrace_1_R = squeeze(sum(sum(double(a_data_1_R).*repmat(inpoly, [1, 1, nframes]))))/sum(inpoly(:));
+    itrace_2_R = squeeze(sum(sum(double(a_data_2_R).*repmat(inpoly, [1, 1, nframes]))))/sum(inpoly(:));
+
+    hold on;
+    cur_t = t;
+    plt_cond_1_R(end+1) = plot( cur_t, itrace_1_R, 'Color', currcolor, 'LineWidth', 2);
+    plt_cond_2_R(end+1) = plot( cur_t, itrace_2_R, 'Color', currcolor, 'LineWidth', 2, 'LineStyle', '--');
+    
+    xlim([0 max(cur_t)]);
+    ylim([-0.4 1.7]);
+    xlabel('Time (s)', 'FontSize', 14, 'FontWeight', 'bold');
+    ylabel('dF/F');
+    set(gca, 'FontSize', 14 );
+    set(gca, 'FontWeight', 'bold');
+    title('Right');
     
     colorindex = colorindex+1;
     
@@ -151,10 +171,30 @@ ll = legend( [ plt_cond_1(1), plt_cond_2(1) ], ...
     [ condition_trials_str{ 2 } '(' num2str( cond_2_num_trials ) ')'], 'Location', 'southeast');
 set(ll, 'Interpreter', 'none');
 
+ax1 = subplot(2,2,4); % plot the trace
+
+yy = ylim;
+y_min = yy(1)-yy(1)*0.01; y_max = yy(2);
+hh = fill([ first_stim_t first_stim_t last_stim_t last_stim_t ],[y_min y_max y_max y_min ], rgb('Wheat'));
+set(gca,'children',circshift(get(gca,'children'),-1));
+set(hh, 'EdgeColor', 'None');
+
+hh = fill([ wind_on wind_on wind_off wind_off ],[y_min y_max y_max y_min ], rgb('Lavender'));
+set(gca,'children',circshift(get(gca,'children'),-1));
+set(hh, 'EdgeColor', 'None');
+
+cond_1_num_trials = size( btraces_per_condition{ 1, 2 }( :, ac.VEL_YAW, : ), 1 );
+cond_2_num_trials = size( btraces_per_condition{ 2, 2 }( :, ac.VEL_YAW, : ), 1 );
+
+ll = legend( [ plt_cond_1_R(1), plt_cond_2_R(1) ], ...
+    [ condition_trials_str{ 1 } '(' num2str( cond_1_num_trials ) ')'], ...
+    [ condition_trials_str{ 2 } '(' num2str( cond_2_num_trials ) ')'], 'Location', 'southeast');
+set(ll, 'Interpreter', 'none');
+
 drawnow;
 
-saveas(f1, [ filename_prefix '_' ac.task_str{trial_type} '_rois.fig']);
-saveas(f1, [ filename_prefix '_' ac.task_str{trial_type} '_rois.png']);
+saveas(f1, [ filename_prefix '_LR_rois.fig']);
+saveas(f1, [ filename_prefix '_LR_rois.png']);
 
 end
 

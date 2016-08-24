@@ -54,9 +54,9 @@ for trial_type = 1:trial_cnt
             continue;
         end
         
-        if( turn_t < 3.1 )
-            continue;
-        end
+%         if( turn_t < 3.1 )
+%             continue;
+%         end
         end
         
         % yaw_during_stim = cur_yaw_tc( find( (bdata_vel_time > prestim) & (bdata_vel_time <= (prestim+stim))) );
