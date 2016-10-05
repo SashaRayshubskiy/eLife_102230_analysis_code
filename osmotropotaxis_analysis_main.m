@@ -259,8 +259,8 @@ clicky_two_condition_bdata(ref_img, PLANE_OF_INTEREST, TRIAL_TYPE_OF_INTEREST, c
 %% Clicky showing both left and right trials
 ac = get_analysis_constants();
 
-roi_session = 2;
-PLANE_OF_INTEREST = 16;
+roi_session = 22;
+PLANE_OF_INTEREST = 12;
 ref_img = squeeze(mean(mean(squeeze(cdata_raw{ 1 }(40:45,:,:,PLANE_OF_INTEREST,:)),4),1));
 
 diff_image_path = [ analysis_path '/' condition_str '_sid_' num2str(sid) '_plane_' num2str(PLANE_OF_INTEREST) '_both_sides_roi_session_' num2str(roi_session) ];
@@ -813,16 +813,26 @@ tic; savefast(cdata_mat_path, 'cdata_raw', 'cdata_meta', 'ctrial_meta'); toc
 
 %% Generate stack
 %stack_files = {'stack_00001.tif', 'stack_00002.tif', 'stack_00003.tif'};
-stack_datapath = '/data/drive0/sasha/160522_op6s_R13G10_03/';
-stack_files = {'stack_01__00001.tif', 'stack_01__00002.tif', 'stack_01__00003.tif', ... 
-               'stack_01__00004.tif', 'stack_01__00005.tif', 'stack_01__00006.tif', ...
-               'stack_01__00007.tif', 'stack_01__00008.tif', 'stack_01__00009.tif', ...
-                };
+stack_datapath = '/data/drive0/tots/161005_op6s_VT033290_03/anatomy/';
+
+stack_files = { 'stack_00002.tif', 'stack_00003.tif', 'stack_00004.tif', 'stack_00005.tif', ...
+                'stack_00006.tif', 'stack_00007.tif', 'stack_00008.tif', 'stack_00009.tif', ...
+                 'stack_000010.tif', 'stack_00011.tif', ...
+              };
+
+
+% stack_files = {'stack_01__00001.tif', 'stack_01__00002.tif', 'stack_01__00003.tif', ... 
+%                'stack_01__00004.tif', 'stack_01__00005.tif', 'stack_01__00006.tif', ...
+%                'stack_01__00007.tif', 'stack_01__00008.tif', 'stack_01__00009.tif', ...
+%                 };
+            
+            
+            
 %stack_files = {'stack_00004.tif'};
-stack_path = [analysis_path '/brain_stack'];
+%stack_path = [analysis_path '/brain_stack'];
 
 for s = 1:length(stack_files)
-    cur_path = [stack_datapath '/2p/' stack_files{ s }];
+    cur_path = [stack_datapath stack_files{ s }];
     cur_stack = generate_stack_movie( cur_path );    
     if( s == 1 )
         stack = cur_stack;
