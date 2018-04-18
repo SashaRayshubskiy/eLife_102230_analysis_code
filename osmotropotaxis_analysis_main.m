@@ -1,4 +1,4 @@
-%% Load imaging and behavioral data
+%% Step 1: Load imaging and behavioral data
 global slash;
 
 clear all;
@@ -29,7 +29,7 @@ if(~exist(analysis_path, 'dir'))
     mkdir(analysis_path);
 end
 
-sid = [ 0 ];
+sid = [ 1 ];
 
 aconstants = get_analysis_constants;
 trial_type_cnt = 2; 
@@ -85,6 +85,56 @@ frame_start_offsets_per_plane = generate_frame_start_offsets_per_plane( 1, b_raw
 ref_imgs = squeeze(mean(cdata_raw{ 1 }(1,:,:,:),4));
 end
 
+%% Step 2: Get behavioral data analysis
+display_avg_velocity_exclude_zero_vel_RL_only(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
+display_avg_velocity_left_right_only(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
+display_per_trial_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
+
+%% Step 3: Generate turning metadata and select expected turning vs. ignoring trials
+turn_metadata = generate_turning_metadata( sid, bdata_vel_time, bdata_vel, analysis_path );
+
+[ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list_v2( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path );
+
+asid= 0;
+avg_cond_btrace_trace_filepath = [ analysis_path '/' condition_str '_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+with_single_trials = 1;
+display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
+
+with_single_trials = 0;
+display_two_condition_trials_avg( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
+
+%% Step 4: Generate df/f time courses for both conditions (expected turning vs ingnoring stim)
+
+if (dt == 1 )
+    tic; [ btraces_per_condition, avg_df_f_per_condition_per_plane ] = collect_two_behavioral_condition_and_df_f_per_cond( condition_trials, cdata_raw, bdata_vel, VPS, trial_exclusion_list, btrial_meta ); toc;
+else
+    FPS = VPS/dt;
+    tic; [ btraces_per_condition, avg_df_f_per_condition_per_plane ] = collect_two_behavioral_condition_and_df_f_per_cond_single_plane( condition_trials, cdata_raw, bdata_vel, FPS, trial_exclusion_list, btrial_meta ); toc;
+end
+
+%% Step 5: Examine mean image from every plane
+
+a_const = get_analysis_constants;
+
+cur_trial_type = a_const.RIGHT;
+cur_trial_type_str = a_const.task_str{cur_trial_type};
+trial_id = 4;
+
+cur_cdata     = squeeze(cdata_raw{ cur_trial_type }(trial_id,:,:,:,:,:));
+figsave_prefix = [analysis_path '/avg_volume_' cur_trial_type_str '_tid_' num2str(trial_id) ];
+display_avg_volume( down_params, cur_cdata, figsave_prefix );
+
+%% Step 6: Get ROIs and show avg tc for each
+
+ac = get_analysis_constants();
+
+roi_session = 100;
+PLANE_OF_INTEREST = 2;
+ref_img = squeeze(mean(mean(squeeze(cdata_raw{ 1 }(40:45,:,:,PLANE_OF_INTEREST,:)),4),1));
+
+diff_image_path = [ analysis_path '/' condition_str '_sid_' num2str(sid) '_plane_' num2str(PLANE_OF_INTEREST) '_both_sides_roi_session_' num2str(roi_session) ];
+clicky_two_condition_bdata_LR(ref_img, PLANE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
+
 %% Display behavioral data
 display_avg_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
 %display_avg_velocity_exclude_zero_vel(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path ); 
@@ -139,11 +189,6 @@ if (CLUSTER_DATA == 1)
     
     clust = generate_turning_clusters_v2( sid_tmp, bdata_vel_time_tmp, bdata_vel_tmp, analysis_path_tmp, MAX_CLUSTERS, plot_idx);
 end
-
-%%
-display_avg_velocity_exclude_zero_vel_RL_only(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
-display_avg_velocity_left_right_only(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
-display_per_trial_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
 
 %% Generate turning clusters using standard unsupervised clustering tools.
 MAX_CLUSTERS = 5;
@@ -236,16 +281,6 @@ else
     tic; [ btraces_per_condition, avg_df_f_per_condition_per_plane ] = collect_two_behavioral_condition_and_df_f_per_cond_single_plane( condition_trials, cdata_raw, bdata_vel, FPS, trial_exclusion_list, btrial_meta ); toc;
 end
 
-%%
-a_const = get_analysis_constants;
-
-cur_trial_type = a_const.RIGHT;
-cur_trial_type_str = a_const.task_str{cur_trial_type};
-trial_id = 4;
-
-cur_cdata     = squeeze(cdata_raw{ cur_trial_type }(trial_id,:,:,:,:,:));
-figsave_prefix = [analysis_path '/avg_volume_' cur_trial_type_str '_tid_' num2str(trial_id) ];
-display_avg_volume( down_params, cur_cdata, figsave_prefix );
 
 %%
 roi_session = 30;
