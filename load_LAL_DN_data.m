@@ -1,4 +1,4 @@
-function [ t_all, t_vel_all, yaw_all, fwd_all, ephys_all_A, ephys_all_B ] = load_LAL_DN_data( working_dir, directories_to_analyze, ephys_SR, ball_SR )
+function [ t_all, t_vel_all, yaw_all, fwd_all, ephys_all_A, ephys_all_B ] = load_LAL_DN_data( working_dir, directories_to_analyze, ephys_SR, ball_SR, get_B )
 
 dataset_cnt = length(directories_to_analyze);
 
@@ -69,7 +69,7 @@ for d = 1:dataset_cnt
         
         D = cur_data.trial_bdata;
         
-        [currentA, voltageA, currentB, voltageB] = get_dual_scaled_voltage_and_current( D );
+        [currentA, voltageA, currentB, voltageB] = get_dual_scaled_voltage_and_current( D, get_B );
         
         t = cur_data.trial_time;
         

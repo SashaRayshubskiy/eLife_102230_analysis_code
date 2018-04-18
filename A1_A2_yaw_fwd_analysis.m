@@ -6,23 +6,24 @@ close all;
 working_dir = '/data/drive1/sasha/';
 
 settings = sensor_settings;
-%ephys_SR = settings.sampRate;
-ephys_SR = 4000;
+ephys_SR = settings.sampRate;
 ball_SR = settings.sensorPollFreq;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-directories_to_analyze =  { { '161208_lexAOpCsChrimson_gfp_83blexA_ss730_03', 0, 1900 }, ...                          
-                            { '161208_lexAOpCsChrimson_gfp_83blexA_ss730_04', 1, 2346 }, ...                           
-                            { '161208_lexAOpCsChrimson_gfp_83blexA_ss730_05', 0, 1740 }, ... 
-                            { '161210_lexAOpCsChrimson_gfp_83blexA_ss730_06', 0, 1882 } };
+directories_to_analyze_A2 =  { { '161208_lexAOpCsChrimson_gfp_83blexA_ss730_03', 0, 1900 }, ...                          
+                               { '161208_lexAOpCsChrimson_gfp_83blexA_ss730_04', 1, 2346 }, ...                           
+                               { '161208_lexAOpCsChrimson_gfp_83blexA_ss730_05', 0, 1740 }, ... 
+                               { '161210_lexAOpCsChrimson_gfp_83blexA_ss730_06', 0, 1882 } };
 
 %directories_to_analyze = { { '161208_lexAOpCsChrimson_gfp_83blexA_ss730_05', 0, 1740 } };                        
 %directories_to_analyze = { { '161218_lexAOpCsChrimson_gfp_83blexA_ss731_02', 0, 3000 } }; 
 
-% directories_to_analyze = { { '161218_lexAOpCsChrimson_gfp_83blexA_ss731_02', 0, 3000 }, ...                          
-%                            { '170721_lexAOpCsChrimson_gfp_83blexA_ss731_05', 2, 2829 }, ...                           
-%                            { '170726_lexAOpCsChrimson_gfp_83blexA_ss731_08', 0, 1656 }, ...
-%                            { '170727_lexAOpCsChrimson_gfp_83blexA_ss731_12', 0, 2800 }};
+%                              { '170721_lexAOpCsChrimson_gfp_83blexA_ss731_05', 2, 2829 }, ...                           
+
+CELL_TYPE = 'A1';
+directories_to_analyze_A1 = { { '161218_lexAOpCsChrimson_gfp_83blexA_ss731_02', 0, 3000 }, ...                          
+                              { '170726_lexAOpCsChrimson_gfp_83blexA_ss731_08', 0, 1656 }, ...
+                              { '170727_lexAOpCsChrimson_gfp_83blexA_ss731_12', 0, 2800 }};
 
 pre_stim_t = 3.0;
 stim_t =  3.5;
@@ -32,15 +33,322 @@ inter_trial_t = 5.0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 timenow_str = datestr(datetime, 'yymmdd_HHMMSS');
-summary_analysis_path = [working_dir '/summary_analysis/ephys_vs_yaw_analysis/triggered_analysis_' timenow_str];
+analysis_path = [working_dir '/summary_analysis/A1_A2_multi_fly_analysis/'];
 
-if(~exist(summary_analysis_path, 'dir'))
-    mkdir(summary_analysis_path);
+if(~exist(analysis_path, 'dir'))
+    mkdir(analysis_path);
 end
 
-[t_all, t_vel_all, yaw_all, fwd_all, ephys_all_A, ephys_all_B] = load_LAL_DN_data( working_dir, directories_to_analyze, ephys_SR, ball_SR );
+[t_all_A2, t_vel_all_A2, yaw_all_A2, fwd_all_A2, ephys_all_A2, dummy] = load_LAL_DN_data( working_dir, directories_to_analyze_A2, ephys_SR, ball_SR, 0 );
+[t_all_A1, t_vel_all_A1, yaw_all_A1, fwd_all_A1, ephys_all_A1, dummy] = load_LAL_DN_data( working_dir, directories_to_analyze_A1, ephys_SR, ball_SR, 0 );
 
-EVENT_FIND_PEAKS = 10;
-EVENT_FR_THRESHOLD_CROSSING = 11;
+% Calculate PSTH and downsample for scatter plots
 
-EVENT_FINDING_METHOD = EVENT_FR_THRESHOLD_CROSSING;
+num_flies_A1 = length( directories_to_analyze_A1 );
+num_flies_A2 = length( directories_to_analyze_A2 );
+psth_dt_samples = ephys_SR/ball_SR;
+
+psth_A1         = cell(1, num_flies_A1);
+A1_psth_down    = cell(1, num_flies_A1);
+fwd_all_down_A1 = cell(1, num_flies_A1);
+yaw_all_down_A1 = cell(1, num_flies_A1);
+
+
+psth_A2         = cell(1, num_flies_A2);
+A2_psth_down    = cell(1, num_flies_A2);
+fwd_all_down_A2 = cell(1, num_flies_A2);
+yaw_all_down_A2 = cell(1, num_flies_A2);
+
+BIN_SIZE = 0.05;
+DT_EPHYS = ephys_SR * BIN_SIZE;
+DT_YAW   = ball_SR * BIN_SIZE;
+
+for f = 1:num_flies_A1
+    SPIKE_THRESHOLD_LAL_DN = 2.0;
+    tic; psth_A1{f} = calculate_psth_A1( t_all_A1{f}, t_vel_all_A1{f}, ephys_all_A1{f}, ephys_SR, SPIKE_THRESHOLD_LAL_DN, psth_dt_samples ); toc;
+
+    A1_psth_down{f} = squeeze(mean(reshape( psth_A1{f}, [ DT_YAW, length( psth_A1{f} ) / DT_YAW ] ), 1));
+    fwd_all_down_A1{f} = squeeze(mean(reshape( fwd_all_A1{f}, [ DT_YAW, length( yaw_all_A1{f} )/DT_YAW ]), 1));
+    yaw_all_down_A1{f} = squeeze(mean(reshape( yaw_all_A1{f}, [ DT_YAW, length( yaw_all_A1{f} ) / DT_YAW ]), 1));
+end
+
+for f = 1:num_flies_A2
+    SPIKE_THRESHOLD_LAL_DN = 0.3;
+    tic; psth_A2{f} = calculate_psth_A2( t_all_A2{f}, t_vel_all_A2{f}, ephys_all_A2{f}, ephys_SR, SPIKE_THRESHOLD_LAL_DN, psth_dt_samples ); toc;
+
+    A2_psth_down{f} = squeeze(mean(reshape( psth_A2{f}, [ DT_YAW, length( psth_A2{f})/DT_YAW ] ), 1));
+    fwd_all_down_A2{f} = squeeze(mean(reshape( fwd_all_A2{f}, [ DT_YAW, length( yaw_all_A2{f} )/DT_YAW ]), 1));
+    yaw_all_down_A2{f} = squeeze(mean(reshape( yaw_all_A2{f}, [ DT_YAW, length( yaw_all_A2{f} )/DT_YAW ]), 1));
+end
+
+%% Exclude data where the fly is standing still
+SAVE_SUFFIX_STR = 'exclude_standing';
+
+for f = 1:num_flies_A1
+    A1_psth_down_tmp{f} = A1_psth_down{f};
+    fwd_all_down_A1_tmp{f} = fwd_all_down_A1{f};
+    yaw_all_down_A1_tmp{f} = yaw_all_down_A1{f};
+end
+
+
+%% Include running straight only 
+SAVE_SUFFIX_STR = 'include_running_straight_only';
+
+% 
+
+
+%% Plot A1, A2 yaw vs. forward vel scatter plots 
+
+f = figure('units','normalized','outerposition',[0 0 1 1]);
+%f = figure();
+
+A1_psth_all = [];
+A1_yaw_all  = [];
+A1_fwd_all  = [];
+
+A2_psth_all = [];
+A2_yaw_all  = [];
+A2_fwd_all  = [];
+
+for f=1:num_flies_A1
+
+    subplot(2,2,1);    
+    hold on;
+    plot(A1_psth_down{f}(1:end-SHIFT_FACTOR_YAW+1), yaw_all_down_A1{f}(SHIFT_FACTOR_YAW:end), 'o', 'MarkerSize', 3);
+    xlabel('A1 PSTH (spikes/s)');
+    ylabel('A1 Yaw (deg/s)');
+    title(['Yaw (yaw shift factor: ' num2str(SHIFT_FACTOR_YAW*BIN_SIZE) ' s)']);
+    ylim([-1500 1500]);
+    grid on;
+    
+    subplot(2,2,2);
+    hold on;
+    plot(A1_psth_down{f}(1:end-SHIFT_FACTOR_FWD+1), fwd_all_down_A1{f}(SHIFT_FACTOR_FWD:end), 'o', 'MarkerSize', 3);
+    xlabel('A1 PSTH (spikes/s)');
+    ylabel('Fwd (mm/s)');  
+    title(['Fwd (fwd shift factor: ' num2str(SHIFT_FACTOR_FWD*BIN_SIZE) ' s)']);
+    ylim([-80 100]);    
+    grid on;
+    
+    A1_psth_all = horzcat( A1_psth_all, A1_psth_down{f}(1:end-SHIFT_FACTOR_YAW+1));
+    A1_yaw_all  = horzcat( A1_yaw_all,  yaw_all_down_A1{f}(SHIFT_FACTOR_YAW:end));
+    A1_fwd_all  = horzcat( A1_fwd_all,  fwd_all_down_A1{f}(SHIFT_FACTOR_YAW:end));        
+end
+
+for f=1:num_flies_A2
+
+    subplot(2,2,3);    
+    hold on;
+    plot(A2_psth_down{f}(1:end-SHIFT_FACTOR_YAW+1), yaw_all_down_A2{f}(SHIFT_FACTOR_YAW:end), 'o', 'MarkerSize', 3);
+    xlabel('A2 PSTH (spikes/s)');
+    ylabel('A2 Yaw (deg/s)');
+    ylim([-1500 1500]);
+    grid on;
+    
+    subplot(2,2,4);
+    hold on;
+    plot(A2_psth_down{f}(1:end-SHIFT_FACTOR_FWD+1), fwd_all_down_A2{f}(SHIFT_FACTOR_FWD:end), 'o', 'MarkerSize', 3);
+    xlabel('A2 PSTH (spikes/s)');
+    ylabel('Fwd (mm/s)');    
+    ylim([-80 100]);    
+    grid on;
+    
+    A2_psth_all = horzcat( A2_psth_all, A2_psth_down{f}(1:end-SHIFT_FACTOR_YAW+1));
+    A2_yaw_all  = horzcat( A2_yaw_all,  yaw_all_down_A2{f}(SHIFT_FACTOR_YAW:end));
+    A2_fwd_all  = horzcat( A2_fwd_all,  fwd_all_down_A2{f}(SHIFT_FACTOR_YAW:end));        
+end
+
+savestr = '/A1_A2_psth_vs_yaw_and_fwd_scatter_all_flies';
+if( exist( SAVE_SUFFIX_STR ) == 1 )
+    savestr = [ savestr '_' SAVE_SUFFIX_STR ];
+end
+
+saveas(f, [analysis_path savestr '.fig']);
+saveas(f, [analysis_path savestr '.png']);
+
+%% Plot 2D histograms 
+%f = figure;
+f = figure('units','normalized','outerposition',[0 0 1 1]);
+
+CAXIS_LIMIT_YAW = 50;
+CAXIS_LIMIT_FWD = CAXIS_LIMIT_YAW;
+
+SHIFT_FACTOR_FWD = 3;
+SHIFT_FACTOR_YAW = 3;
+
+YAW_LIM = 1000;
+
+subplot(2,2,1);
+hist3([A1_psth_all', A1_yaw_all'], 'NBins', [50 100], 'CDataMode','auto','FaceColor','interp' );
+xlabel('A1 PSTH (spikes/s)');
+ylabel('Yaw (deg/s)');
+zlabel('count');
+colormap gray;
+colorbar
+caxis([0 CAXIS_LIMIT_YAW]);
+view(2)
+axis tight;
+ylim([-1.0*YAW_LIM YAW_LIM]);
+title(['Yaw (yaw shift factor: ' num2str(SHIFT_FACTOR_YAW*BIN_SIZE) ' s)']);
+
+subplot(2,2,2);
+hist3([A1_psth_all', A1_fwd_all'], 'NBins', [50 100], 'CDataMode','auto','FaceColor','interp' );
+xlabel('A1 PSTH (spikes/s)');
+ylabel('Fwd (mm/s)');
+zlabel('count');
+colorbar
+caxis([0 CAXIS_LIMIT_FWD]);
+view(2)
+axis tight;
+ylim([-40 80]);
+zlabel('count');
+title(['Fwd (fwd shift factor: ' num2str(SHIFT_FACTOR_FWD*BIN_SIZE) ' s)']);
+
+subplot(2,2,3);
+hist3([A2_psth_all', A2_yaw_all'], 'NBins', [50 100], 'CDataMode','auto','FaceColor','interp' );
+xlabel('A2 PSTH (spikes/s)');
+ylabel('Yaw (deg/s)');
+zlabel('count');
+colorbar
+caxis([0 CAXIS_LIMIT_YAW]);
+view(2)
+axis tight;
+ylim([-1.0*YAW_LIM YAW_LIM]);
+zlabel('count');
+
+subplot(2,2,4);
+hist3([A2_psth_all', A2_fwd_all'], 'NBins', [50 100], 'CDataMode','auto','FaceColor','interp' );
+xlabel('A2 PSTH (spikes/s)');
+ylabel('Fwd (mm/s)');
+zlabel('count');
+colorbar
+caxis([0 CAXIS_LIMIT_FWD]);
+view(2)
+axis tight;
+ylim([-40 80]);
+zlabel('count');
+
+savestr = '/A1_A2_psth_vs_yaw_and_fwd_hist2_all_flies';
+if( exist( SAVE_SUFFIX_STR ) == 1 )
+    savestr = [ savestr '_' SAVE_SUFFIX_STR ];
+end
+
+saveas(f, [analysis_path savestr '.fig']);
+saveas(f, [analysis_path savestr '.png']);
+
+
+%% Plot x,y weighted averages from 2D histograms above
+
+f = figure('units','normalized','outerposition',[0 0 1 1]);
+
+% A1
+[N, c] = hist3( [A1_psth_all', A1_yaw_all'], 'NBins', [50 100], 'CDataMode', 'auto', 'FaceColor', 'interp' );
+
+psth_N_weighted = N .* repmat(c{1}', [1 size(N,2)]);
+yaw_N_weighted = N .* repmat(c{2}, [size(N,1) 1]);
+
+weight_sum_yaw = sum(N,1);
+weight_sum_psth = sum(N,2);
+
+A1_psth_all_wavg_yaw_x = squeeze(sum(psth_N_weighted, 1)) ./ weight_sum_yaw;
+yaw_all_wavg_psth_x = sum(yaw_N_weighted, 2) ./ weight_sum_psth;
+
+subplot(2,4,1);
+plot(c{2}, A1_psth_all_wavg_yaw_x);
+ylim([0 100]);
+xlim([-1000 1000]);
+xlabel('Yaw (deg/s)');
+ylabel('A1 PSTH (spikes/s)');
+
+subplot(2,4,2);
+plot(c{1}, yaw_all_wavg_psth_x');
+xlim([0 100]);
+ylim([-500 500]);
+ylabel('Yaw (deg/s)');
+xlabel('A1 PSTH (spikes/s)');
+
+[N,c] = hist3([A1_psth_all', A1_fwd_all'], 'NBins', [50 100], 'CDataMode','auto','FaceColor','interp' );
+
+psth_N_weighted = N .* repmat(c{1}', [1 size(N,2)]);
+fwd_N_weighted = N .* repmat(c{2}, [size(N,1) 1]);
+
+weight_sum_fwd = sum(N,1);
+weight_sum_psth = sum(N,2);
+
+A1_psth_all_wavg_fwd_x = squeeze(sum(psth_N_weighted, 1)) ./ weight_sum_fwd;
+fwd_all_wavg_psth_x = sum(fwd_N_weighted, 2) ./ weight_sum_psth;
+
+subplot(2,4,3);
+plot(c{2}, A1_psth_all_wavg_fwd_x);
+ylim([0 100]);
+xlim([-10 20]);
+xlabel('Fwd (mm/s)');
+ylabel('A1 PSTH (spikes/s)');
+
+subplot(2,4,4);
+plot(c{1}, fwd_all_wavg_psth_x');
+xlim([0 100]);
+ylim([-10 20]);
+ylabel('Fwd (mm/s)');
+xlabel('A1 PSTH (spikes/s)');
+
+% A2
+[N, c] = hist3( [A2_psth_all', A2_yaw_all'], 'NBins', [50 100], 'CDataMode', 'auto', 'FaceColor', 'interp' );
+
+psth_N_weighted = N .* repmat(c{1}', [1 size(N,2)]);
+yaw_N_weighted = N .* repmat(c{2}, [size(N,1) 1]);
+
+weight_sum_yaw = sum(N,1);
+weight_sum_psth = sum(N,2);
+
+A2_psth_all_wavg_yaw_x = squeeze(sum(psth_N_weighted, 1)) ./ weight_sum_yaw;
+yaw_all_wavg_psth_x = sum(yaw_N_weighted, 2) ./ weight_sum_psth;
+
+subplot(2,4,5);
+plot(c{2}, A2_psth_all_wavg_yaw_x);
+ylim([0 100]);
+xlim([-1000 1000]);
+xlabel('Yaw (deg/s)');
+ylabel('A2 PSTH (spikes/s)');
+
+subplot(2,4,6);
+plot(c{1}, yaw_all_wavg_psth_x');
+xlim([0 100]);
+ylim([-500 500]);
+ylabel('Yaw (deg/s)');
+xlabel('A2 PSTH (spikes/s)');
+
+[N,c] = hist3([A2_psth_all', A2_fwd_all'], 'NBins', [50 100], 'CDataMode','auto','FaceColor','interp' );
+
+psth_N_weighted = N .* repmat(c{1}', [1 size(N,2)]);
+fwd_N_weighted = N .* repmat(c{2}, [size(N,1) 1]);
+
+weight_sum_fwd = sum(N,1);
+weight_sum_psth = sum(N,2);
+
+A2_psth_all_wavg_fwd_x = squeeze(sum(psth_N_weighted, 1)) ./ weight_sum_fwd;
+fwd_all_wavg_psth_x = sum(fwd_N_weighted, 2) ./ weight_sum_psth;
+
+subplot(2,4,7);
+plot(c{2}, A2_psth_all_wavg_fwd_x);
+ylim([0 100]);
+xlim([-10 20]);
+xlabel('Fwd (mm/s)');
+ylabel('A2 PSTH (spikes/s)');
+
+subplot(2,4,8);
+plot(c{1}, fwd_all_wavg_psth_x');
+xlim([0 100]);
+ylim([-10 20]);
+ylabel('Fwd (mm/s)');
+xlabel('A2 PSTH (spikes/s)');
+
+savestr = '/A1_A2_psth_vs_yaw_and_fwd_weighted_avg_all_flies';
+if( exist( SAVE_SUFFIX_STR ) == 1 )
+    savestr = [ savestr '_' SAVE_SUFFIX_STR ];
+end
+
+saveas(f, [analysis_path savestr '.fig']);
+saveas(f, [analysis_path savestr '.png']);
+
+
