@@ -20,8 +20,8 @@ end
 %trial_exclusion_list = nsyb_83blexA_01_blank_trials;
 trial_exclusion_list = {[],[],[]};
 
-%datapath = '/data/drive0/sasha/160818_op6s_VT025718__cell_bodies_01/';
-datapath = '/data/drive0/tots/160824_op6s_VT040354_01/';
+datapath = '/data/drive1/sasha/180210_gcamp6f_ss730_LexAOp_CsCr_83b-lexA_01/';
+%datapath = '/data/drive0/tots/160824_op6s_VT040354_01/';
 
 analysis_path = [datapath slash 'analysis'];
 
@@ -32,7 +32,7 @@ end
 sid = [ 0 ];
 
 aconstants = get_analysis_constants;
-trial_type_cnt = 3;
+trial_type_cnt = 2; 
 
 % Load behavioral data
 bdata_path = [datapath  slash 'ball' slash ];
@@ -87,7 +87,7 @@ end
 
 %% Display behavioral data
 display_avg_velocity(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path);
-display_avg_velocity_exclude_zero_vel(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path ); 
+%display_avg_velocity_exclude_zero_vel(sid, b_rawdata, bdata_vel, bdata_vel_time, analysis_path ); 
 
 %% Display single trial trajectories
 traj = get_single_trial_trajectories(sid, bdata_vel_time, bdata_vel);
@@ -97,7 +97,8 @@ display_single_trial_trajectories_v2( sid, bdata_vel_time, traj, analysis_path )
 
 %% Display behavioral data
 %datapath_tmp = '/data/drive0/sasha//';
-datapath_tmp = '/data/drive0/sasha/160818_op6s_VT025718__cell_bodies_01/';
+slash = '/';
+datapath_tmp = '/data/drive1/sasha/180220_RIW5_CsCr_01/';
 
 analysis_path_tmp = [datapath_tmp slash 'analysis'];
 
@@ -105,8 +106,8 @@ if(~exist(analysis_path_tmp, 'dir'))
     mkdir(analysis_path_tmp);
 end
 
-sid_tmp = [ 0 ];
-trial_type_cnt_tmp = 2;
+sid_tmp = [ 1 ];
+trial_type_cnt_tmp = 1; 
 
 bdata_path_tmp = [datapath_tmp  slash 'ball' slash ];
 tic; [ b_rawdata_tmp, b_time_tmp, btrial_meta_tmp ] = load_behavioral_data(sid_tmp, bdata_path_tmp, trial_type_cnt_tmp ); toc
@@ -117,9 +118,11 @@ if( trial_type_cnt_tmp == 3 )
     display_avg_velocity(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
     display_avg_velocity_exclude_zero_vel(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp); 
 elseif( trial_type_cnt_tmp == 2 )
-    display_avg_velocity_exclude_zero_vel_RL_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);    
+    %display_avg_velocity_exclude_zero_vel_RL_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);    
+    %display_avg_velocity_exclude_zero_vel_both_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);    
     display_avg_velocity_left_right_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
-    display_per_trial_velocity(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
+    %display_avg_velocity_left_right_both(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
+    %display_per_trial_velocity(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
 elseif( trial_type_cnt_tmp == 1 )
     display_avg_velocity_exclude_zero_vel_one_side_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);    
     display_avg_velocity_one_side_only(sid_tmp, b_rawdata_tmp, bdata_vel_tmp, bdata_vel_time_tmp, analysis_path_tmp);
@@ -152,12 +155,18 @@ generate_turning_magnitude_vs_bilateral_calcium_delta_response_plot( bdata_vel_t
 
 %% Generate turning metadataum
 
-
 turn_metadata = generate_turning_metadata( sid, bdata_vel_time, bdata_vel, analysis_path );
 
 %% Generate expected vs. ignored
 % [ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list( bdata_vel_time, bdata_vel );
 [ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list_v2( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path );
+
+%% Generate expected vs. ignored
+% [ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list( bdata_vel_time, bdata_vel );
+[ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list_v3( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path );
+
+%% Generate stationary vs. walking 
+[ condition_trials, condition_trials_str, condition_str ] = generate_stationary_vs_walking( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path );
 
 %% Generate large vs. small counter turn
 
@@ -189,6 +198,17 @@ display_two_condition_trials( condition_trials, condition_trials_str, bdata_vel_
 
 with_single_trials = 0;
 display_two_condition_trials_avg( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
+
+%% Display behavioral 2 condition trials.
+
+%condition_trials{2}(2) = 14;
+asid= 0;
+avg_cond_btrace_trace_filepath = [ analysis_path '/' condition_str '_asid_' num2str( asid ) '_sid_' num2str(sid) ];
+with_single_trials = 1;
+display_two_condition_trials_fwd( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
+
+with_single_trials = 0;
+display_two_condition_trials_avg_fwd( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, avg_cond_btrace_trace_filepath, with_single_trials );
 
 %% Display trial running trajectories for each analysis condition
 
@@ -249,8 +269,8 @@ clicky_two_condition_bdata_8roi_LR(ref_img, PLANE_OF_INTEREST, condition_trials_
 ac = get_analysis_constants();
 
 roi_session = 11;
-PLANE_OF_INTEREST = 9;
-TRIAL_TYPE_OF_INTEREST = ac.LEFT;
+PLANE_OF_INTEREST = 10;
+TRIAL_TYPE_OF_INTEREST = ac.RIGHT;
 ref_img = squeeze(mean(mean(squeeze(cdata_raw{ 1 }(40:45,:,:,PLANE_OF_INTEREST,:)),4),1));
 
 diff_image_path = [ analysis_path '/' condition_str '_sid_' num2str(sid) '_plane_' num2str(PLANE_OF_INTEREST) '_side_' num2str(TRIAL_TYPE_OF_INTEREST) '_roi_session_' num2str(roi_session) ];
@@ -259,9 +279,9 @@ clicky_two_condition_bdata(ref_img, PLANE_OF_INTEREST, TRIAL_TYPE_OF_INTEREST, c
 %% Clicky showing both left and right trials
 ac = get_analysis_constants();
 
-roi_session = 22;
+roi_session = 0;
 PLANE_OF_INTEREST = 12;
-ref_img = squeeze(mean(mean(squeeze(cdata_raw{ 1 }(40:45,:,:,PLANE_OF_INTEREST,:)),4),1));
+ref_img = squeeze(mean(mean(squeeze(cdata_raw{ 1 }(10:20,:,:,PLANE_OF_INTEREST,:)),4),1));
 
 diff_image_path = [ analysis_path '/' condition_str '_sid_' num2str(sid) '_plane_' num2str(PLANE_OF_INTEREST) '_both_sides_roi_session_' num2str(roi_session) ];
 clicky_two_condition_bdata_LR(ref_img, PLANE_OF_INTEREST, condition_trials_str, btraces_per_condition, avg_df_f_per_condition_per_plane, bdata_vel_time, frame_start_offsets_per_plane, VPS, diff_image_path );
@@ -270,7 +290,7 @@ clicky_two_condition_bdata_LR(ref_img, PLANE_OF_INTEREST, condition_trials_str, 
 ac = get_analysis_constants();
 
 roi_session = 0;
-PLANE_OF_INTEREST = 8;
+PLANE_OF_INTEREST = 9;
 ref_img = squeeze(mean(mean(squeeze(cdata_raw{ 3 }(1:5,:,:,PLANE_OF_INTEREST,:)),4),1));
 
 diff_image_path = [ analysis_path '/' condition_str '_tc_left_right_asid_' num2str( asid ) '_sid_' num2str(sid) '_roi_session_' num2str(roi_session) ];
@@ -532,9 +552,11 @@ colormap jet;
 caxis([-0.1 1.0]);
 title('After');
 
-%% Collect and display time courses in an ROI, both condition        
+%% Collect and display time courses in an ROI, both condition      
+asid = 0;
 rois = get_rois_from_volume_v2( asid, squeeze(cdata_raw{ 1 }(1,:,:,:,:,:)), analysis_path );
 
+%%
 tic; [ btraces_per_condition, ctraces_in_roi_per_condition ] = collect_two_behavioral_condition_traces( condition_trials, cdata_raw, bdata_vel, VPS, rois, trial_exclusion_list, btrial_meta ); toc;
 
 avg_trace_filepath = [ analysis_path '/' condition_str '_avg_traces_asid_' num2str( asid ) '_sid_' num2str(sid) ];
@@ -583,7 +605,7 @@ tic; generate_tt_trial_single_plane( asid, sid, cdata_raw, bdata_vel, btrial_met
 
 %% Generate trial_by_trial data
 VPS = cdata_meta.volume_rate;
-%tic; generate_trial_by_trial_composite_behaviour_and_calcium_panels( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, analysis_path, new_rois ); toc;
+%tic; generate_trial_by_triwww.googl.ecomwwwal_composite_behaviour_and_calcium_panels( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, analysis_path, new_rois ); toc;
 tic; generate_trial_by_trial_composite_behaviour_and_calcium_panels( asid, sid, cdata_raw, bdata_vel, btrial_meta, bdata_vel_time, VPS, analysis_path, rois ); toc;
 
 %% Generate all raw cdata on the same axis as behavioral data.
@@ -813,21 +835,20 @@ tic; savefast(cdata_mat_path, 'cdata_raw', 'cdata_meta', 'ctrial_meta'); toc
 
 %% Generate stack
 %stack_files = {'stack_00001.tif', 'stack_00002.tif', 'stack_00003.tif'};
-stack_datapath = '/data/drive0/tots/161005_op6s_VT033290_03/anatomy/';
+%stack_datapath = '/data/drive0/tots/161005_op6s_VT033290_03/anatomy/';
+stack_datapath = '/data/drive0/sasha/160522_op6s_R13G10_03/2p/';
 
-stack_files = { 'stack_00002.tif', 'stack_00003.tif', 'stack_00004.tif', 'stack_00005.tif', ...
-                'stack_00006.tif', 'stack_00007.tif', 'stack_00008.tif', 'stack_00009.tif', ...
-                 'stack_000010.tif', 'stack_00011.tif', ...
-              };
+% stack_files = { 'stack_00002.tif', 'stack_00003.tif', 'stack_00004.tif', 'stack_00005.tif', ...
+%                 'stack_00006.tif', 'stack_00007.tif', 'stack_00008.tif', 'stack_00009.tif', ...
+%                  'stack_00010.tif', 'stack_00011.tif', ...
+%               };
 
 
-% stack_files = {'stack_01__00001.tif', 'stack_01__00002.tif', 'stack_01__00003.tif', ... 
-%                'stack_01__00004.tif', 'stack_01__00005.tif', 'stack_01__00006.tif', ...
-%                'stack_01__00007.tif', 'stack_01__00008.tif', 'stack_01__00009.tif', ...
-%                 };
-            
-            
-            
+stack_files = {'stack_01__00001.tif', 'stack_01__00002.tif', 'stack_01__00003.tif', ... 
+               'stack_01__00004.tif', 'stack_01__00005.tif', 'stack_01__00006.tif', ...
+               'stack_01__00007.tif', 'stack_01__00008.tif', 'stack_01__00009.tif', ...
+                };
+                                   
 %stack_files = {'stack_00004.tif'};
 %stack_path = [analysis_path '/brain_stack'];
 
@@ -859,7 +880,8 @@ end
 
 %%
 %%% Display stack
-display_stack_rgb( stack, stack_path );
+display_stack_rgb_1( stack, stack_datapath );
+%display_stack_rgb( stack, stack_datapath );
 %channel = 1;
 %display_stack( channel, stack, stack_path );
 
@@ -876,13 +898,16 @@ stack_save_path = [cur_path 'stack_'];
 display_stack_one_chan(stack, stack_save_path );
 
 %%
-cur_path = '/data/drive0/sasha/160721_ablation_gfp_vt025718_02/2p/';
+%cur_path = '/data/drive0/sasha/160721_ablation_gfp_vt025718_02/2p/';
+cur_path = '/data/drive1/sasha/180219_ss730_2xGFP_01/2p/';
 
-N = 5;
+stack_pre = 'left_A2_stack_zoom_to_LAL_EPA_00002';
+
+N = 1;
 cur_stack = [];
 for i=1:N
 
-    stack_path = [ cur_path 'post_ablation_left_LAL_to_PS_tract_0000' num2str(i) '.tif' ];
+    stack_path = [ cur_path stack_pre '.tif' ];
 
     stack_tmp = generate_stack_movie( stack_path );
     
@@ -896,7 +921,8 @@ end
 
 stack = cur_stack ./ N;
 
-stack_save_path = [cur_path 'stack_'];
+%% Display stack 
+stack_save_path = [cur_path stack_pre 'stack_'];
 display_stack_one_chan(stack, stack_save_path );
 
 %% Read in a snapshot and display it.

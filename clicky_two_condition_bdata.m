@@ -137,11 +137,11 @@ hh = fill([ first_stim_t first_stim_t last_stim_t last_stim_t ],[y_min y_max y_m
 set(gca,'children',circshift(get(gca,'children'),-1));
 set(hh, 'EdgeColor', 'None');
 
-wind_on = 2.0;
-wind_off = 6.5;
-hh = fill([ wind_on wind_on wind_off wind_off ],[y_min y_max y_max y_min ], rgb('Lavender'));
-set(gca,'children',circshift(get(gca,'children'),-1));
-set(hh, 'EdgeColor', 'None');
+% wind_on = 2.0;
+% wind_off = 6.5;
+% hh = fill([ wind_on wind_on wind_off wind_off ],[y_min y_max y_max y_min ], rgb('Lavender'));
+% set(gca,'children',circshift(get(gca,'children'),-1));
+% set(hh, 'EdgeColor', 'None');
 
 cond_1_num_trials = size( btraces_per_condition{ 1, trial_type }( :, ac.VEL_YAW, : ), 1 );
 cond_2_num_trials = size( btraces_per_condition{ 2, trial_type }( :, ac.VEL_YAW, : ), 1 );

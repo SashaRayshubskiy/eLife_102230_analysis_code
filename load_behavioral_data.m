@@ -55,7 +55,7 @@ for sid = sids
         
         load_path = [ datapath slash filename ];
         raw_data = load( load_path );
-        disp(['Loaded file: ' load_path]);
+        %disp(['Loaded file: ' load_path]);
         
         rid = bdata_idx_per_type(trial_type_idx);
 

@@ -11,7 +11,7 @@ for s = 3:size(stack,3)-2
     imagesc(squeeze(mean(stack( :, :, s-2:s+2 ),3)));
     axis image;
     colormap gray;
-    caxis([0 7000]);
+    caxis([0 3000]);
     title( [' frame - ' num2str( s ) ] );
 
     writeVideo(vid, getframe(f));

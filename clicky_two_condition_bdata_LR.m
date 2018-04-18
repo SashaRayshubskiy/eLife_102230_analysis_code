@@ -86,7 +86,9 @@ plt_cond_2 = [];
 plt_cond_1_R = [];
 plt_cond_2_R = [];
 
-clicky_plane = 2;
+YLIM = 0.4;
+
+clicky_plane = 1;
 while(npts > 0)
     
     subplot(2,2,clicky_plane);
@@ -118,7 +120,7 @@ while(npts > 0)
     plt_cond_2(end+1) = plot( cur_t, itrace_2, 'Color', currcolor, 'LineWidth', 2, 'LineStyle', '--');
     
     xlim([0 max(cur_t)]);
-    ylim([-0.4 1.7]);
+    ylim([-1*YLIM YLIM]);
     xlabel('Time (s)', 'FontSize', 14, 'FontWeight', 'bold');
     ylabel('dF/F');
     set(gca, 'FontSize', 14 );
@@ -136,7 +138,9 @@ while(npts > 0)
     plt_cond_2_R(end+1) = plot( cur_t, itrace_2_R, 'Color', currcolor, 'LineWidth', 2, 'LineStyle', '--');
     
     xlim([0 max(cur_t)]);
-    ylim([-0.4 1.7]);
+    %ylim([-0.4 1.7]);
+    ylim([-1.0*YLIM YLIM]);
+    
     xlabel('Time (s)', 'FontSize', 14, 'FontWeight', 'bold');
     ylabel('dF/F');
     set(gca, 'FontSize', 14 );
@@ -157,8 +161,11 @@ hh = fill([ first_stim_t first_stim_t last_stim_t last_stim_t ],[y_min y_max y_m
 set(gca,'children',circshift(get(gca,'children'),-1));
 set(hh, 'EdgeColor', 'None');
 
-wind_on = 2.0;
-wind_off = 6.5;
+%wind_on = 2.0;
+%wind_off = 6.5;
+wind_on = 0;
+wind_off = 0.01;
+
 hh = fill([ wind_on wind_on wind_off wind_off ],[y_min y_max y_max y_min ], rgb('Lavender'));
 set(gca,'children',circshift(get(gca,'children'),-1));
 set(hh, 'EdgeColor', 'None');

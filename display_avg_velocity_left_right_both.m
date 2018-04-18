@@ -1,4 +1,4 @@
-function [ output_args ] = display_avg_velocity_left_right_only( sid, bdata_raw, bdata_vel, bdata_vel_time, analysis_path, with_single_trials )
+function [ output_args ] = display_avg_velocity_left_right_both( sid, bdata_raw, bdata_vel, bdata_vel_time, analysis_path, with_single_trials )
 
 ac = get_analysis_constants;
 settings = sensor_settings;
@@ -13,10 +13,9 @@ last_stim = settings.pre_stim+settings.stim;
 
 f = figure('units','normalized','outerposition',[0 0 1 1]);
 
-IGNORE_LAST = 20;
-start_trial = 1;
-end_left_trial = size(bdata_vel{ac.LEFT},1)-IGNORE_LAST;
-end_right_trial = size(bdata_vel{ac.RIGHT},1)-IGNORE_LAST;
+start_trial = size(bdata_vel{ac.LEFT},1)/2;
+end_left_trial = size(bdata_vel{ac.LEFT},1);
+end_right_trial = size(bdata_vel{ac.RIGHT},1);
 
 subplot(3,1,1);
 hold on;
@@ -68,6 +67,8 @@ hold on;
 mean_left_vel_side = squeeze(mean(bdata_vel{ac.LEFT}(start_trial:end_left_trial,ac.VEL_SIDE,:)));
 mean_right_vel_side = squeeze(mean(bdata_vel{ac.RIGHT}(start_trial:end_right_trial,ac.VEL_SIDE,:)));
 
+
+
 sem_left_vel_side = squeeze(std(bdata_vel{ac.LEFT}(start_trial:end_left_trial,ac.VEL_SIDE,:),1)) ./ sqrt(size(bdata_vel{ ac.LEFT }(1:end_left_trial,ac.VEL_SIDE,:),1));
 sem_right_vel_side = squeeze(std(bdata_vel{ac.RIGHT}(start_trial:end_right_trial,ac.VEL_SIDE,:),1)) ./ sqrt(size(bdata_vel{ ac.RIGHT }(1:end_right_trial,ac.VEL_SIDE,:),1));
 
@@ -99,25 +100,19 @@ title('Side velocity');
 subplot(3,1,3);
 hold on;
 
-mean_left_vel_yaw = squeeze(mean(bdata_vel{ac.LEFT}(start_trial:end_left_trial,ac.VEL_YAW,:)));
-mean_right_vel_yaw = squeeze(mean(bdata_vel{ac.RIGHT}(start_trial:end_right_trial,ac.VEL_YAW,:)));
+all_trials = squeeze(vertcat(bdata_vel{ac.LEFT}(start_trial:end_left_trial,ac.VEL_YAW,:), bdata_vel{ac.RIGHT}(start_trial:end_right_trial,ac.VEL_YAW,:)));
 
-sem_left_vel_yaw = squeeze(std(bdata_vel{ac.LEFT}(start_trial:end_left_trial,ac.VEL_YAW,:),1)) ./ sqrt(size(bdata_vel{ ac.LEFT }(start_trial:end_left_trial,ac.VEL_YAW,:),1));
-sem_right_vel_yaw = squeeze(std(bdata_vel{ac.RIGHT}(start_trial:end_right_trial,ac.VEL_YAW,:),1)) ./ sqrt(size(bdata_vel{ ac.RIGHT }(start_trial:end_right_trial,ac.VEL_YAW,:),1));
+mean_all_trials = squeeze(mean(all_trials));
+std_all_trials = squeeze(std(all_trials,1) ./ sqrt(size(all_trials,1)));
 
 fh = fill( [bdata_vel_time, fliplr(bdata_vel_time)], ... 
-        [(mean_left_vel_yaw+sem_left_vel_yaw)' fliplr((mean_left_vel_yaw-sem_left_vel_yaw)')], ...
+        [(mean_all_trials+std_all_trials) fliplr((mean_all_trials-std_all_trials))], ...
         rgb('Salmon'));
 set(fh, 'EdgeColor', 'None');
 
-fh = fill( [bdata_vel_time, fliplr(bdata_vel_time)], ... 
-        [(mean_right_vel_yaw+sem_right_vel_yaw)' fliplr((mean_right_vel_yaw-sem_right_vel_yaw)')], ...
-        rgb('PaleGreen'));
-set(fh, 'EdgeColor', 'None');
-
-p1 = plot(bdata_vel_time, mean_left_vel_yaw, 'color', ac.LEFT_CLR);
-p2 = plot(bdata_vel_time, mean_right_vel_yaw, 'color', ac.RIGHT_CLR);
-ylim([-0.2 0.07]);
+p1 = plot(bdata_vel_time, mean_all_trials, 'color', ac.LEFT_CLR);
+%p2 = plot(bdata_vel_time, mean_right_vel_yaw, 'color', ac.RIGHT_CLR);
+ylim([-0.05 0.05]);
 
 xlim([0, bdata_vel_time(end)]);
 xlabel('Time (s)');
@@ -130,8 +125,8 @@ hh = fill([ first_stim first_stim last_stim last_stim ],[y_min y_max y_max y_min
 set(gca,'children',circshift(get(gca,'children'),-1));
 set(hh, 'EdgeColor', 'None');
 
-saveas(f, [analysis_path '/avg_velocity_sid_' num2str( sid ) '.fig']);
-saveas(f, [analysis_path '/avg_velocity_sid_' num2str( sid ) '.png']);
+saveas(f, [analysis_path '/avg_both_velocity_sid_' num2str( sid ) '.fig']);
+saveas(f, [analysis_path '/avg_both_velocity_sid_' num2str( sid ) '.png']);
 
 end
 

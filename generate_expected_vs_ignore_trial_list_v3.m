@@ -1,6 +1,8 @@
-function [ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list_v2( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path )
+function [ condition_trials, condition_trials_str, condition_str ] = generate_expected_vs_ignore_trial_list_v3( sid, bdata_vel_time, bdata_vel, turn_metadata, analysis_path )
 % Version 2. Use turning metadata to categorize turning: 
 % [ turn_t, turn_mag, counter_turn_t, counter_turn_mag ]
+
+%%% THIS IS A TEMP 
 
 ac = get_analysis_constants;
 settings = sensor_settings;
@@ -17,7 +19,7 @@ LEFT_TURN  = 1;
 RIGHT_TURN = 2;
 NO_TURN    = 3;
 
-TURN_THRESHOLD = 0.01; % ???
+TURN_THRESHOLD = 0.02; % ???
 FWD_VELOCITY_THRESHOLD = 0.001;
 %TURN_THRESHOLD = 0.0000001; % ???
 %FWD_VELOCITY_THRESHOLD = 0.00000001;
@@ -45,7 +47,8 @@ for trial_type = 1:trial_cnt
         
         cur_avg_yaw = mean(bdata_vel{ trial_type }( trial_ord, ac.VEL_YAW, : ));
         
-        turn_magnitude = turn_metadata{ trial_type }( trial_ord, 2 ) - cur_avg_yaw;
+        %turn_magnitude = turn_metadata{ trial_type }( trial_ord, 2 ) - cur_avg_yaw;
+        turn_magnitude = turn_metadata{ trial_type }( trial_ord, 2 );
         
         disp(['turn_mag: ' num2str(turn_magnitude) ' avg_turn_mag: ' num2str(cur_avg_yaw)]);
         
@@ -56,7 +59,7 @@ for trial_type = 1:trial_cnt
         fwd_vel = cur_fwd_tc( find( bdata_vel_time < (prestim+stim)) );
         avg_fwd_vel = mean( fwd_vel );
         
-        if 1
+        if 0
         if( abs(avg_fwd_vel) < FWD_VELOCITY_THRESHOLD )
             continue;
         end

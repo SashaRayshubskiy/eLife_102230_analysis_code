@@ -35,10 +35,10 @@ for trial_type = 1:trial_type_cnt
                 
         %large_turn_range = [ edges(1), edges(range_bin) ];
         %small_turn_range = [ edges(range_bin) edges(2*range_bin)];
-        ct_large_turn_range = [ 0.06, 0.3 ];
-        ct_small_turn_range = [ 0 0.01];
+        ct_large_turn_range = [ 0.02, 0.2 ];
+        ct_small_turn_range = [ 0 0.02];
 
-        t_turn_range = [ -0.3, -0.06 ];
+        t_turn_range = [ -0.4, -0.03 ];
     
     elseif( trial_type == ac.RIGHT )
         first_nonzero_turn_idx = (find(edges == 0) + 1);
@@ -49,10 +49,10 @@ for trial_type = 1:trial_type_cnt
         
         %large_turn_range = [edges(first_nonzero_turn_idx + range_bin) edges(first_nonzero_turn_idx + 2*range_bin-1)];
         %small_turn_range = [edges(first_nonzero_turn_idx), edges(first_nonzero_turn_idx + range_bin)];        
-        ct_large_turn_range = [-0.4 -0.06];
-        ct_small_turn_range = [-0.01 0];
+        ct_large_turn_range = [-0.2 -0.02];
+        ct_small_turn_range = [-0.02 0];
         
-        t_turn_range = [ 0.06, 0.35 ];
+        t_turn_range = [ 0.02, 0.2 ];
       end    
     
     for trial_ord = 1:size( bdata_vel{trial_type}, 1 )
@@ -65,9 +65,9 @@ for trial_type = 1:trial_type_cnt
         fwd_vel = cur_fwd_tc( find( bdata_vel_time < (prestim+stim)) );
         avg_fwd_vel = mean( fwd_vel );
                 
-        if( avg_fwd_vel < FWD_VELOCITY_THRESHOLD )
-            continue;
-        end
+%         if( avg_fwd_vel < FWD_VELOCITY_THRESHOLD )
+%             continue;
+%         end
         
         if( (turn_magnitude > t_turn_range(1)) && (turn_magnitude < t_turn_range(2)) )
             if( (counter_turn_magnitude > ct_large_turn_range(1)) && (counter_turn_magnitude < ct_large_turn_range(2)) )

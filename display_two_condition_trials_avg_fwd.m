@@ -1,4 +1,4 @@
-function display_two_condition_trials_avg( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, filepath_prefix, with_single_trials )
+function display_two_condition_trials_avg_fwd( condition_trials, condition_trials_str, bdata_vel_time, bdata_vel, filepath_prefix, with_single_trials )
 
 SPACING = 0.01;
 PADDING = 0;
@@ -57,8 +57,8 @@ for trial_type = 1:2
         end
         
         % Plot average trial
-        avg_yaw_trace = mean( yaw_traces );
-        sem_yaw_trace = std( yaw_traces, 1 ) ./ sqrt( size(yaw_traces,1) );        
+        avg_yaw_trace = mean( fwd_traces );
+        sem_yaw_trace = std( fwd_traces, 1 ) ./ sqrt( size(fwd_traces,1) );        
         
         fh = fill( [bdata_vel_time, fliplr(bdata_vel_time)], ... 
         [(avg_yaw_trace+sem_yaw_trace) fliplr((avg_yaw_trace-sem_yaw_trace))], ...
@@ -67,16 +67,16 @@ for trial_type = 1:2
         
         phdl(cond_ord,1) = plot( bdata_vel_time, avg_yaw_trace, 'color', cur_color_avg, 'LineStyle', cur_cond_symbol, 'LineWidth', 2.0 );
         
-        traces_cnt(cond_ord) = size(yaw_traces,1);
+        traces_cnt(cond_ord) = size(fwd_traces,1);
         
         if( cond_ord == 1 )
             ll = legend([ phdl(1,1), phdl(2,1) ], ...
-                ['Vel yaw - ' condition_trials_str{ 1 } '( ' num2str( traces_cnt( 1 ) ) ' )'], ...
-                ['Vel yaw - ' condition_trials_str{ 2 } '( ' num2str( traces_cnt( 2 ) ) ' )'] );
+                ['Vel fwd - ' condition_trials_str{ 1 } '( ' num2str( traces_cnt( 1 ) ) ' )'], ...
+                ['Vel fwd - ' condition_trials_str{ 2 } '( ' num2str( traces_cnt( 2 ) ) ' )'] );
             set(ll, 'Interpreter', 'none');
         end
         
-        %ylim([-0.15 0.15]);
+        ylim([-0.15 0.15]);
         yy = ylim;
         y_min = yy(1)-yy(1)*0.01; y_max = yy(2);
         hh = fill([ first_stim_t first_stim_t last_stim_t last_stim_t ],[y_min y_max y_max y_min ], rgb('Wheat'));
@@ -91,7 +91,7 @@ for trial_type = 1:2
         end
         title([ac.task_str(trial_type)]);
         
-        ylabel('Yaw velocity (au/s)');
+        ylabel('Fwd velocity (au/s)');
         
         drawnow;
     end

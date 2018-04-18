@@ -9,7 +9,7 @@ prestim = settings.pre_stim;
 stim    = settings.stim;
 poststim    = settings.post_stim;
 
-poststim    = 7.5-prestim-stim;
+%poststim    = 7.5-prestim-stim;
 
 total_time = prestim + stim + poststim;
 
@@ -39,6 +39,8 @@ for trial_type = 1:trial_cnt
     hold on;
     for i=1:size(yaw_data,1)
         cur_trial_data_1 = squeeze(yaw_data(i,:));
+        
+        cur_trial_data_1 = cur_trial_data_1 - mean(cur_trial_data_1);
         
         cur_trial_data = fft_filter( cur_trial_data_1', yaw_freq_cutoff, settings.sensorPollFreq );
         
