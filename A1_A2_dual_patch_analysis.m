@@ -22,12 +22,16 @@ end
 directories_to_analyze = { { '170816_2xGFP_ss731_75C10_01', [0, 1], 2*11.5*150 } };
 %directories_to_analyze = { { '170816_2xGFP_ss731_75C10_01', [0, 1], 11.5*10 } };
 
-[t_all, t_vel_all, yaw_all, fwd_all, ephys_all_A, ephys_all_B] = load_LAL_DN_data( working_dir, directories_to_analyze, ephys_SR, ball_SR );
+[t_all, t_vel_all, yaw_all, fwd_all, ephys_all_A, ephys_all_B] = load_LAL_DN_data( working_dir, directories_to_analyze, ephys_SR, ball_SR, 1 );
 
 idx = 1;
 
+%% Show histgram of fwd vel
+figure;
+hist(fwd_all{1}, 1000);
+
 %% Convert physiology to PSTH
-SPIKE_THRESHOLD_LAL_DN = 0.3;
+SPIKE_THRESHOLD_LAL_DN = 0.25;
 psth_dt_samples = ephys_SR/ball_SR;
 tic; A2_psth = calculate_psth_A2( t_all{1}, t_vel_all{1}, ephys_all_A{1}, ephys_SR, SPIKE_THRESHOLD_LAL_DN, psth_dt_samples ); toc;
 
@@ -42,6 +46,19 @@ DT_YAW   = ball_SR * BIN_SIZE;
 yaw_t_down = squeeze(mean(reshape(t_vel_all{1}, [DT_YAW, length(t_vel_all{1})/DT_YAW]),1));
 A2_psth_down = squeeze(mean(reshape(A2_psth, [DT_YAW, length(A2_psth)/DT_YAW]),1));
 A1_psth_down = squeeze(mean(reshape(A1_psth, [DT_YAW, length(A1_psth)/DT_YAW]),1));
+
+
+%% Plot A1 vs A2 psth
+
+f = figure;
+
+plot(A1_psth_down, A2_psth_down, 'o', 'MarkerSize', 3);
+xlabel('A1 PSTH (spikes/s)');
+ylabel('A2 PSTH (spikes/s)');
+title('A1 vs A2 PSTH');
+
+saveas(f, [analysis_path '/A1_vs_A2_psth_scatter.fig']);
+saveas(f, [analysis_path '/A1_vs_A2_psth_scatter.png']);
 
 %%
 FILT_FACTOR = 0.04;

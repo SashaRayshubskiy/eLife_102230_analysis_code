@@ -21,7 +21,7 @@ end
 
 directories_to_analyze = { { '180410_gfp_3G_ss730_dual_08', [0], 11.5*300 } };
 
-[t_all, t_vel_all, yaw_all, fwd_all, ephys_all_A, ephys_all_B] = load_LAL_DN_data( working_dir, directories_to_analyze, ephys_SR, ball_SR );
+[t_all, t_vel_all, yaw_all, fwd_all, ephys_all_A, ephys_all_B] = load_LAL_DN_data( working_dir, directories_to_analyze, ephys_SR, ball_SR, 1);
 
 idx = 1;
 
@@ -204,9 +204,18 @@ saveas(f,[analysis_path '/A2_right_left_corr_hist.png']);
 %% Calculate PSTH for both channels
 
 SPIKE_THRESHOLD_LAL_DN = 0.25;
-psth_dt_samples = ephys_SR/ball_SR;
+psth_dt_samples = ephys_SR / ball_SR;
 tic; A2_L_psth = calculate_psth_A2( t_all{1}, t_vel_all{1}, ephys_all_A{1}, ephys_SR, SPIKE_THRESHOLD_LAL_DN, psth_dt_samples ); toc;
 tic; A2_R_psth = calculate_psth_A2( t_all{1}, t_vel_all{1}, ephys_all_B{1}, ephys_SR, SPIKE_THRESHOLD_LAL_DN, psth_dt_samples ); toc;
+
+%% Test for binning artifact 
+
+figure;
+plot(A2_L_psth, 'o', 'MarkerSize', 3);
+
+figure;
+plot(A2_L_psth-A2_R_psth, 'o', 'MarkerSize', 3);
+
 
 %% Plot yaw, fwd, and PSTH for left and right A2 neuron
 
@@ -246,12 +255,20 @@ linkaxes(ax, 'x');
 BIN_SIZE = 0.05;
 DT_YAW   = ball_SR * BIN_SIZE;
 
-A2_L_psth_base = A2_L_psth - mean(A2_L_psth);
-A2_R_psth_base = A2_R_psth - mean(A2_R_psth);
+%A2_L_psth_base = A2_L_psth - mean(A2_L_psth);
+%A2_R_psth_base = A2_R_psth - mean(A2_R_psth);
 
-A2_L_psth_down = squeeze(mean(reshape( A2_L_psth_base, [ DT_YAW, length(A2_L_psth)/DT_YAW ] ),1));
-A2_R_psth_down = squeeze(mean(reshape( A2_R_psth_base, [ DT_YAW, length(A2_L_psth)/DT_YAW ] ),1));
-yaw_all_down = squeeze(mean(reshape(yaw_all{1}, [ DT_YAW, length( yaw_all{1} )/DT_YAW ]),1));
+A2_L_psth_base = A2_L_psth;
+A2_R_psth_base = A2_R_psth;
+
+A2_L_psth_down = squeeze(mean(reshape( A2_L_psth_base, [ DT_YAW, length(A2_L_psth) / DT_YAW ] ), 1));
+A2_R_psth_down = squeeze(mean(reshape( A2_R_psth_base, [ DT_YAW, length(A2_L_psth) / DT_YAW ] ), 1));
+yaw_all_down = squeeze(mean(reshape( yaw_all{1}, [ DT_YAW, length( yaw_all{1} ) / DT_YAW ]), 1));
+% fwd_all_down = squeeze(mean(reshape( fwd_all{1}, [ DT_YAW, length( yaw_all{1} ) / DT_YAW ]), 1));
+fwd_all_down_std = squeeze(std(reshape( fwd_all{1}, [ DT_YAW, length( yaw_all{1} ) / DT_YAW ]), 0, 1));
+
+% figure;
+% hist(fwd_all_down_std, 1000);
 
 cnt = 0;
 A2_L_psth_choosen = zeros(1, length( A2_L_psth_down ));
@@ -260,42 +277,53 @@ yaw_choosen  = zeros(1, length( yaw_all_down ));
 
 PSTH_BASELINE_CUTOFF = 1.0;
 SHIFT_FACTOR = 3;
-cnt = 0;
-for i = 1:length( A2_L_psth_down )-(SHIFT_FACTOR+1)
+mcnt = 0;
+
+WINDOW_SIZE = 5;
+FWD_STD_THRESHOLD = 0.01;
+
+for i = 1:length( A2_L_psth_down )-(SHIFT_FACTOR+1)-WINDOW_SIZE
     
     cur_A2_L_psth = A2_L_psth_down( i );
     cur_A2_R_psth = A2_R_psth_down( i );
     
-    if( (( cur_A2_L_psth <= -1.0*PSTH_BASELINE_CUTOFF ) || ( cur_A2_L_psth >= PSTH_BASELINE_CUTOFF )) && ...
-        (( cur_A2_R_psth <= -1.0*PSTH_BASELINE_CUTOFF ) || ( cur_A2_R_psth >= PSTH_BASELINE_CUTOFF )) )        
-        A2_L_psth_choosen( cnt+1 ) = cur_A2_L_psth;
-        A2_R_psth_choosen( cnt+1 ) = cur_A2_R_psth;
-        yaw_choosen( cnt+1 ) = yaw_all_down(i+SHIFT_FACTOR);
+    cur_fwd_std = fwd_all_down_std( i );
+    
+    if( abs(cur_fwd_std) < FWD_STD_THRESHOLD )
+       continue; 
     end
-        
-    cnt = cnt + 1;
+    
+%    if( (( cur_A2_L_psth <= -1.0*PSTH_BASELINE_CUTOFF ) || ( cur_A2_L_psth >= PSTH_BASELINE_CUTOFF )) && ...
+%        (( cur_A2_R_psth <= -1.0*PSTH_BASELINE_CUTOFF ) || ( cur_A2_R_psth >= PSTH_BASELINE_CUTOFF )) )
+        A2_L_psth_choosen( mcnt+1 ) = cur_A2_L_psth;
+        A2_R_psth_choosen( mcnt+1 ) = cur_A2_R_psth;
+        yaw_choosen( mcnt+1 ) = yaw_all_down(i+SHIFT_FACTOR);
+        mcnt = mcnt + 1;
+%    end        
 end
+
+MARKER_SIZE = 1;
 
 f = figure;
 
 subplot(2,2,1);
-plot( A2_L_psth_choosen(1:cnt), yaw_choosen(1:cnt), 'o', 'MarkerSize', 3 );
+plot( A2_L_psth_choosen(1:mcnt), yaw_choosen(1:mcnt), 'o', 'MarkerSize', MARKER_SIZE );
 xlabel('A2 L PSTH (spikes/s)');
 ylabel('Yaw (deg/s)');
 title('Left A2 vs. yaw');
 grid on;
 
 subplot(2,2,2);
-plot( A2_R_psth_choosen(1:cnt), yaw_choosen(1:cnt), 'o', 'MarkerSize', 3 );
+plot( A2_R_psth_choosen(1:mcnt), yaw_choosen(1:mcnt), 'o', 'MarkerSize', MARKER_SIZE );
 xlabel('A2 R PSTH (spikes/s)');
 ylabel('Yaw (deg/s)');
 title('Right A2 vs. yaw');
 grid on;
 
 subplot(2,2,3);
-A2_L_R_psth_choosen_diff = A2_L_psth_choosen(1:cnt) - A2_R_psth_choosen(1:cnt);
+A2_L_R_psth_choosen_diff = A2_L_psth_choosen(1:mcnt) - A2_R_psth_choosen(1:mcnt);
 
-plot( A2_L_R_psth_choosen_diff, yaw_choosen(1:cnt), 'o', 'MarkerSize', 3 );
+plot( A2_L_R_psth_choosen_diff, yaw_choosen(1:mcnt), 'o', 'MarkerSize', MARKER_SIZE );
 xlabel('A2 L-R PSTH diff (spikes/s)');
 ylabel('Yaw (deg/s)');
 title('diff(Left,Right) A2 vs. yaw');
@@ -303,7 +331,7 @@ grid on;
 
 subplot(2,2,4);
 %plot( A2_L_psth_choosen(1:cnt) ./ A2_R_psth_choosen(1:cnt), yaw_choosen(1:cnt), 'o', 'MarkerSize', 3 );
-semilogx( A2_L_psth_choosen(1:cnt) ./ A2_R_psth_choosen(1:cnt), yaw_choosen(1:cnt), 'o', 'MarkerSize', 3 );
+semilogx( A2_L_psth_choosen(1:mcnt) ./ A2_R_psth_choosen(1:mcnt), yaw_choosen(1:mcnt), 'o', 'MarkerSize', MARKER_SIZE );
 xlabel('A2 L/R PSTH ratio');
 ylabel('Yaw (deg/s)');
 title('div(Left,Right) A2 vs. yaw');
@@ -313,7 +341,7 @@ saveas(f,[analysis_path '/A2_right_left_PSTH_diff_div_vs_yaw_scatter.fig']);
 saveas(f,[analysis_path '/A2_right_left_PSTH_diff_div_vs_yaw_scatter.png']);
 
 f = figure;
-scatter3( A2_L_psth_choosen(1:cnt), yaw_choosen(1:cnt), A2_L_R_psth_choosen_diff );
+scatter3( A2_L_psth_choosen(1:mcnt), yaw_choosen(1:mcnt), A2_L_R_psth_choosen_diff );
 xlabel('A2 L psth (spike/s)');
 ylabel('yaw vel (deg/s)');
 zlabel('A2 L-R psth diff(spike/s)');
@@ -322,13 +350,216 @@ saveas(f,[analysis_path '/A2_left_PSTH_diff_vs_yaw_scatter3.fig']);
 saveas(f,[analysis_path '/A2_left_PSTH_diff_vs_yaw_scatter3.png']);
 
 
+%% WARNING: This depends on previous block. 
+% Plot A2 L/R diff vs. yaw with A2 Left PSTH overlay
+
+f = figure;
+
+A2_small_diff = zeros(1, length(A2_L_R_psth_choosen_diff) );
+A2_small_diff_yaw = zeros(1, length(A2_L_R_psth_choosen_diff) );
+A2_small_diff_L_psth_colors = zeros( length(A2_L_R_psth_choosen_diff), 3 );
+
+DIFF_CUTOFF = 100;
+RBC_SIZE = 40;
+rbc = jet( RBC_SIZE );
+
+min_PSTH = min( min(A2_L_psth_choosen), min(A2_R_psth_choosen) );
+max_PSTH = max( max(A2_L_psth_choosen), max(A2_R_psth_choosen) );
+
+cnt = 0;
+for i = 1:length(A2_L_R_psth_choosen_diff)
+    
+    cur_diff = A2_L_R_psth_choosen_diff( i );
+    
+    %if( A2_L_psth_choosen( i ) > 3 )
+    if( abs(cur_diff) < DIFF_CUTOFF )        
+        A2_small_diff(cnt+1)        = cur_diff;
+        A2_small_diff_yaw(cnt+1)    = yaw_choosen( i );                        
+        
+        PSTH_L_R_avg = (A2_L_psth_choosen( i ) + A2_R_psth_choosen( i ))/2.0;
+
+        % map [-3.56 60] range to [1 40];
+        %
+        %cur_color = rbc( rbc_index, : );
+        
+        if( PSTH_L_R_avg < 0.1 )
+            cur_color = rgb('Magenta');
+            %rbc_index = ceil(interp1([min_PSTH, 0], [1,RBC_SIZE], PSTH_L_R_avg)); 
+            %cur_color = rbc( rbc_index, : );
+        else
+            cur_color = rgb('DimGray');
+        end
+
+%         if( PSTH_L_R_avg < -1.3 )
+%             cur_color = rgb('Magenta');
+%         else
+%             cur_color = rgb('DimGray');
+%         end
+        
+        A2_small_diff_L_psth_colors(cnt+1,:) = cur_color;
+               
+        cnt = cnt + 1;
+    end
+end
+
+scatter( A2_small_diff, A2_small_diff_yaw, 1, A2_small_diff_L_psth_colors);
+
+if 0
+colormap('jet')
+h = colorbar;
+caxis([0 RBC_SIZE]);
+ticks = get(h, 'Ticks');
+cmap_labels = cell(1, length(ticks));
+for i = 1:length( ticks )
+    x = interp1([0,RBC_SIZE], [min_PSTH, 0], ticks(i));
+    
+    cmap_labels{i} = num2str(x,2);
+end
+set(h, 'TickLabels', cmap_labels);
+ylabel(h, 'A2 avg(L,R) PSTH below baseline (spikes/s)');
+end
+
+grid on;
+xlabel('A2 L-R diff PSTH (spikes/s)');
+ylabel('Yaw (deg/s)');
+
+Y = A2_small_diff_yaw;
+X = A2_small_diff;
+[fobj, gof] = fit(X',Y', 'poly1');
+
+title(['A2 left, right diff vs yaw with L,R PSTH = zero overlay (R^2 = ' num2str(gof.rsquare) ')']);
+
+
+saveas(f, [analysis_path '/A2_left_right_diff_vs_yaw_with_left_PSTH_overlay_v2.fig']);
+saveas(f, [analysis_path '/A2_left_right_diff_vs_yaw_with_left_PSTH_overlay_v2.png']);
+
+%% Compare various yaw distributions
+% a. when both cells are not firing
+% b. when both cells are firing a small amount (but not zero)
+% c. all of yaw
+
+f = figure('units','normalized','outerposition',[0 0 1 1]);
+
+NBINS = 1000;
+XMIN = -1000;
+XMAX = 1000;
+subplot(3,1,1);
+hist(yaw_choosen(1:mcnt), NBINS);
+title(['All yaw, mean: ' num2str(mean(yaw_choosen(1:mcnt))) '  std: ' num2str(std(yaw_choosen(1:mcnt))) ]);
+xlim([XMIN XMAX]);
+ylim([0 800]);
+
+yaw_when_both_A2_PSTH_is_zero = zeros(1,length(A2_L_R_psth_choosen_diff));
+yaw_when_both_A2_PSTH_is_zero_cnt = 0;
+
+yaw_when_both_A2_PSTH_is_small = zeros(1,length(A2_L_R_psth_choosen_diff));
+yaw_when_both_A2_PSTH_is_small_cnt = 0;
+
+ZERO_CUTOFF = 0.1;
+SMALL_CUTOFF = 5;
+
+for i = 1:length(A2_L_R_psth_choosen_diff)
+    
+    PSTH_L_R_avg = (A2_L_psth_choosen( i ) + A2_R_psth_choosen( i ))/2.0;
+
+    cur_diff = A2_L_R_psth_choosen_diff( i );
+    
+    if( (A2_L_psth_choosen( i ) < ZERO_CUTOFF) && (A2_R_psth_choosen( i ) < ZERO_CUTOFF) )
+
+        yaw_when_both_A2_PSTH_is_zero( yaw_when_both_A2_PSTH_is_zero_cnt + 1 ) = yaw_choosen( i );
+        yaw_when_both_A2_PSTH_is_zero_cnt = yaw_when_both_A2_PSTH_is_zero_cnt + 1;
+    end
+    
+%     if( ((A2_L_psth_choosen( i ) > ZERO_CUTOFF) && (A2_L_psth_choosen( i ) < SMALL_CUTOFF)) && ...
+%             ((A2_R_psth_choosen( i ) > ZERO_CUTOFF) && (A2_R_psth_choosen( i ) < SMALL_CUTOFF)) )
+        
+    if( ( abs(cur_diff) > 1 ) &&  ( abs(cur_diff) < SMALL_CUTOFF ) )
+        yaw_when_both_A2_PSTH_is_small( yaw_when_both_A2_PSTH_is_small_cnt + 1 ) = yaw_choosen( i );
+        yaw_when_both_A2_PSTH_is_small_cnt = yaw_when_both_A2_PSTH_is_small_cnt + 1;
+    end
+end
+
+subplot(3,1,2);
+hist(yaw_when_both_A2_PSTH_is_zero(1:yaw_when_both_A2_PSTH_is_zero_cnt), NBINS);
+title(['Zero PSTH in both yaw, mean: ' num2str(mean(yaw_when_both_A2_PSTH_is_zero)) '  std: ' num2str(std(yaw_when_both_A2_PSTH_is_zero)) ]);
+xlim([XMIN XMAX]);
+ylim([0 550]);
+
+subplot(3,1,3);
+hist(yaw_when_both_A2_PSTH_is_small(1:yaw_when_both_A2_PSTH_is_small_cnt), NBINS);
+title(['1 < L-R < ' num2str(SMALL_CUTOFF) ' spike/s, yaw mean: ' num2str(mean(yaw_when_both_A2_PSTH_is_small)) '  std: ' num2str(std(yaw_when_both_A2_PSTH_is_small)) ]);
+xlim([XMIN XMAX]);
+ylim([0 40]);
+
+saveas(f, [analysis_path '/yaw_distribution_comparison.fig']);
+saveas(f, [analysis_path '/yaw_distribution_comparison.png']);
+
+[h,p] = ttest2(yaw_choosen(1:mcnt), yaw_when_both_A2_PSTH_is_small(1:yaw_when_both_A2_PSTH_is_small_cnt))
+[h,p] = ttest2(yaw_choosen(1:mcnt), yaw_when_both_A2_PSTH_is_zero(1:yaw_when_both_A2_PSTH_is_zero_cnt))
+[h,p] = ttest2(yaw_when_both_A2_PSTH_is_small(1:yaw_when_both_A2_PSTH_is_small_cnt), yaw_when_both_A2_PSTH_is_zero(1:yaw_when_both_A2_PSTH_is_zero_cnt))
+
+%% Plot avg between both neurons and yaw
+
+PSTH_L_R_avg = (A2_L_psth_choosen + A2_R_psth_choosen)/2.0;
+
+f = figure;
+
+plot( PSTH_L_R_avg, yaw_choosen, 'o', 'MarkerSize', 3 );
+xlabel('A2 left/right avg (spikes/s)'); 
+ylabel('Yaw (deg/s)');
+
+saveas(f, [analysis_path 'A2_left_right_avg_vs_yaw_scatter.fig']);
+saveas(f, [analysis_path 'A2_left_right_avg_vs_yaw_scatter.png']);
+
+%% Plot avg between both neurons and yaw
+
+PSTH_L_R_avg = (A2_L_psth_choosen + A2_R_psth_choosen)/2.0;
+
+% MIN_YAW = min(yaw_choosen);
+% MAX_YAW = max(yaw_choosen);
+MIN_YAW = -500;
+MAX_YAW =  500;
+
+RBC_SIZE = 100;
+rbc = jet( RBC_SIZE );
+
+yaw_colors = zeros(length(A2_L_R_psth_choosen_diff),3);
+for i=1:length(yaw_colors)
+
+    cur_yaw = yaw_choosen(i);
+    
+    if(cur_yaw <= MIN_YAW)
+        rbc_index = 1;
+    elseif(cur_yaw >= MAX_YAW)
+        rbc_index = RBC_SIZE;
+    else
+        rbc_index = ceil(interp1([MIN_YAW, MAX_YAW], [1,RBC_SIZE], cur_yaw)); 
+    end
+    
+    yaw_colors(i,:) = rbc(rbc_index,:);
+end
+
+f = figure;
+
+scatter( A2_L_R_psth_choosen_diff, PSTH_L_R_avg(1:length(A2_L_R_psth_choosen_diff)), 3, yaw_colors );
+ylabel('A2 left/right avg (spikes/s)'); 
+xlabel('A2 left/right diff (spikes/s)');
+colorbar;
+colormap jet;
+caxis([MIN_YAW MAX_YAW]);
+grid on;
+
+saveas(f, [analysis_path 'A2_left_right_avg_vs_diff_with_yaw_overlay_scatter.fig']);
+saveas(f, [analysis_path 'A2_left_right_avg_vs_diff_with_yaw_overlay_scatter.png']);
+
+
 %% Show relationship between left and right A2 neurons PSTH difference and fwd
 
 BIN_SIZE = 0.05;
 DT_YAW   = ball_SR * BIN_SIZE;
 
 A2_L_R_diff_psth = A2_L_psth - A2_R_psth;
-
+        
 A2_L_R_diff_psth_down = squeeze(mean(reshape( A2_L_R_diff_psth, [ DT_YAW, length(A2_L_R_diff_psth)/DT_YAW ] ),1));
 A2_L_psth_down = squeeze(mean(reshape( A2_L_psth, [ DT_YAW, length(A2_L_psth)/DT_YAW ] ),1));
 A2_R_psth_down = squeeze(mean(reshape( A2_R_psth, [ DT_YAW, length(A2_L_psth)/DT_YAW ] ),1));
@@ -426,8 +657,10 @@ RBC_SIZE = 2000;
 BIN_SIZE = 0.05;
 DT_YAW   = ball_SR * BIN_SIZE;
 
-A2_L_psth_base = A2_L_psth - mean(A2_L_psth);
-A2_R_psth_base = A2_R_psth - mean(A2_R_psth);
+%A2_L_psth_base = A2_L_psth - mean(A2_L_psth);
+%A2_R_psth_base = A2_R_psth - mean(A2_R_psth);
+A2_L_psth_base = A2_L_psth;
+A2_R_psth_base = A2_R_psth;
 
 A2_L_psth_down = squeeze(mean(reshape( A2_L_psth_base, [ DT_YAW, length(A2_L_psth)/DT_YAW ] ),1));
 A2_R_psth_down = squeeze(mean(reshape( A2_R_psth_base, [ DT_YAW, length(A2_L_psth)/DT_YAW ] ),1));
@@ -444,7 +677,7 @@ A2_R_choosen = zeros( 1, length(A2_R_psth_down) );
 yaw_choosen = zeros( 1, length(A2_R_psth_down) );
 A2_yaw_colors_choosen = zeros( length(A2_L_psth_down), 3 );
 
-YAW_CUTOFF = 0;
+YAW_CUTOFF = 150;
 cnt = 0;
 for i = 1:length(A2_L_psth_down)-SHIFT_FACTOR
     
@@ -459,42 +692,56 @@ for i = 1:length(A2_L_psth_down)-SHIFT_FACTOR
     
     cur_clr = rbc( cur_rbc_index, : );
     
-    if( (cur_yaw < -1 * YAW_CUTOFF) || (cur_yaw > YAW_CUTOFF) )
-    % if( (cur_yaw > -1 * YAW_CUTOFF) && (cur_yaw < YAW_CUTOFF) )
-        A2_L_choosen( cnt+1 ) = A2_L_psth_down(i);
-        A2_R_choosen( cnt+1 ) = A2_R_psth_down(i);
-        yaw_choosen( cnt+1 ) = cur_yaw;
-        A2_yaw_colors_choosen( cnt+1, : ) = cur_clr;
-        cnt = cnt + 1;
-    end    
+    % Uncommend to remove points from plot based on YAW_CUTOFF
+    if( abs(cur_yaw) < YAW_CUTOFF ) 
+        A2_yaw_colors_choosen( cnt+1, : ) = rgb('Magenta');
+    else
+        A2_yaw_colors_choosen( cnt+1, : ) = rgb('DimGray');
+    end
+    
+    A2_L_choosen( cnt+1 ) = A2_L_psth_down(i);
+    A2_R_choosen( cnt+1 ) = A2_R_psth_down(i);
+    yaw_choosen( cnt+1 ) = cur_yaw;
+    cnt = cnt + 1;
+
+% Uncommend to remove points from plot based on YAW_CUTOFF
+%     if( (cur_yaw < -1 * YAW_CUTOFF) || (cur_yaw > YAW_CUTOFF) )
+%     % if( (cur_yaw > -1 * YAW_CUTOFF) && (cur_yaw < YAW_CUTOFF) )
+%         A2_L_choosen( cnt+1 ) = A2_L_psth_down(i);
+%         A2_R_choosen( cnt+1 ) = A2_R_psth_down(i);
+%         yaw_choosen( cnt+1 ) = cur_yaw;
+%         A2_yaw_colors_choosen( cnt+1, : ) = cur_clr;
+%         cnt = cnt + 1;
+%     end    
 end
 
 f = figure;
 rbc = jet(RBC_SIZE);
 %scatter(A2_L_psth_down, A2_R_psth_down, 4, A2_yaw_colors);
-scatter( A2_L_choosen, A2_R_choosen, 4, A2_yaw_colors_choosen);
+scatter( A2_L_choosen, A2_R_choosen, 2, A2_yaw_colors_choosen);
 %scatter( A2_L_choosen-A2_R_choosen, yaw_choosen, 3 );
-colormap('jet')
-h = colorbar;
-ylabel(h, 'Yaw vel (deg/s)');
-caxis([-1000 1000]);
+%colormap('jet')
+% h = colorbar;
+% ylabel(h, 'Yaw vel (deg/s)');
+% caxis([-1000 1000]);
 xlabel('A2 Left PSTH (spikes/s)');
 ylabel('A2 Right PSTH (spikes/s)');
 grid on;
 axis tight;
-title(['Yaw velocity overlay: yaw cutoff: ' num2str(YAW_CUTOFF) ]);
+title(['abs(yaw velocity) < ' num2str(YAW_CUTOFF) ' = magenta, otherwise = gray']);
 
-saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay.fig']);
-saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay.png']);
+saveas(f,[analysis_path '/A2_right_left_PSTH_scatter_with_yaw_overlay_v2.fig']);
+saveas(f,[analysis_path '/A2_right_left_PSTH_scatter_with_yaw_overlay_v2.png']);
 
+%%
 % Plot a 2D histrogram for A2 L PSTH vs. A2 R PSTH
 f = figure;
 hist3([A2_L_choosen', A2_R_choosen']);
 xlabel('A2 L PSTH (spikes/s)');
 ylabel('A2 R PSTH (spikes/s)');
 zlabel('count');
-saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist.fig']);
-saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist.fig']);
+saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist_v2.fig']);
+saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist_v2.fig']);
 
 
 %% Show relationship between left and right A2 neurons Vm difference and yaw
