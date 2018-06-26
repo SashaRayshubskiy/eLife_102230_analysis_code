@@ -1,8 +1,8 @@
 function [ cur_psth ] = calculate_psth_A1( volts_t, vel_t, voltage, VOLTAGE_SR, SPIKE_THRESHOLD, BIN_SIZE )
 
 USE_INST_FIRING_RATE = 0;
-USE_EXP_FILTER = 0;
-USE_HAMMING_FILTER = 1;
+USE_EXP_FILTER = 1;
+USE_HAMMING_FILTER = 0;
 
 disp(['Got here: 2']);
 %%%
@@ -66,17 +66,18 @@ else
     % Get spikes from a voltage trace (current clamp)
     %%%    
     psth_dt = BIN_SIZE / (1.0*VOLTAGE_SR);
-    disp(['Got here: 4']);
+    %disp(['Got here: 4']);
     sum_of_bins = sum(reshape(spikes, [BIN_SIZE,  length(voltage)/BIN_SIZE]),1);
     
     cur_psth =  sum_of_bins./ psth_dt;
     
-    if ( USE_EXP_FILTER == 1 )        
-        cur_psth = smoothts(cur_psth, 'e', 10);
+    if ( USE_EXP_FILTER == 1 )      
+        INTEGRAL_CORRECTION = 1.5; 
+        cur_psth = smoothts(cur_psth, 'e', 3) / INTEGRAL_CORRECTION;
     elseif ( USE_HAMMING_FILTER == 1 )
         cur_psth = hanningsmooth(cur_psth, 40);
     end
-    disp(['Got here: 5']);
+    %disp(['Got here: 5']);
     %%%%%%%%%%%%%%
 end
 

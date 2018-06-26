@@ -43,7 +43,7 @@ for sid = sids
         tid = str2num(char(tid_str));
         
         trial_type_idx = -1;
-        if( (strcmp(trial_type, 'LeftOdor') == 1) | (strcmp(trial_type, 'OdorLeftWind') == 1) | (strcmp(trial_type, 'OpenLoopLeft') == 1) )
+        if( (strcmp(trial_type, 'LeftOdor') == 1) | (strcmp(trial_type, 'OdorLeftWind') == 1) | (strcmp(trial_type, 'OpenLoopLeft') == 1) | (strcmp(trial_type, 'PicoPump') == 1) )
             trial_type_idx = 1;        
         elseif((strcmp(trial_type, 'RightOdor') == 1) | (strcmp(trial_type, 'OdorRightWind') == 1) | (strcmp(trial_type, 'OpenLoopRight') == 1) )
             trial_type_idx = 2;

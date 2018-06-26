@@ -90,7 +90,7 @@ end
 
 
 %% Display bump dynamics for each trial    end_t   = start_t + nframes;
-close all;
+
 display_bump_dynamics_per_trial( cdata_raw, bdata_vel_time, bdata_vel, VPS, analysis_path );
 
 

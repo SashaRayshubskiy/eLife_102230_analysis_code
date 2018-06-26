@@ -869,23 +869,14 @@ cdata_mat_path = [datamat_path '/cdata_all.mat'];
 tic; savefast(cdata_mat_path, 'cdata_raw', 'cdata_meta', 'ctrial_meta'); toc
 
 %% Generate stack
-%stack_files = {'stack_00001.tif', 'stack_00002.tif', 'stack_00003.tif'};
-%stack_datapath = '/data/drive0/tots/161005_op6s_VT033290_03/anatomy/';
-stack_datapath = '/data/drive0/sasha/160522_op6s_R13G10_03/2p/';
 
-% stack_files = { 'stack_00002.tif', 'stack_00003.tif', 'stack_00004.tif', 'stack_00005.tif', ...
-%                 'stack_00006.tif', 'stack_00007.tif', 'stack_00008.tif', 'stack_00009.tif', ...
-%                  'stack_00010.tif', 'stack_00011.tif', ...
-%               };
+%stack_datapath = '/data/drive0/sasha/160522_op6s_R13G10_03/2p/';
+stack_datapath = '/data/drive2/sasha/180624_R12D09_GFP_stack_01/2p/';
 
-
-stack_files = {'stack_01__00001.tif', 'stack_01__00002.tif', 'stack_01__00003.tif', ... 
-               'stack_01__00004.tif', 'stack_01__00005.tif', 'stack_01__00006.tif', ...
-               'stack_01__00007.tif', 'stack_01__00008.tif', 'stack_01__00009.tif', ...
+stack_files = {'stack_00001.tif', 'stack_00002.tif', 'stack_00003.tif', ... 
+               'stack_00004.tif', 'stack_00005.tif', 'stack_00006.tif', ...
+               'stack_00007.tif', 'stack_00008.tif', 'stack_00009.tif', ...
                 };
-                                   
-%stack_files = {'stack_00004.tif'};
-%stack_path = [analysis_path '/brain_stack'];
 
 for s = 1:length(stack_files)
     cur_path = [stack_datapath stack_files{ s }];
@@ -898,6 +889,16 @@ for s = 1:length(stack_files)
     
     disp(['Loaded stack: ' cur_path]);
 end
+
+stack_f = squeeze(mean(stack,4)) ./ length(stack_files);
+
+
+%% Visualize stack
+
+stack_path = [ stack_datapath 'stack' ];
+display_stack_one_chan( stack_f, stack_path );
+
+
 
 %%
 frame = 300;

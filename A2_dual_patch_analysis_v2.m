@@ -7,6 +7,10 @@ close all;
 
 working_dir = '/data/drive1/sasha/';
 
+%%% WARNING: MAKE SURE EPHYS SAMPLE RATE IS CORRECT 10000 Hz
+%%% WARNING: MAKE SURE EPHYS SAMPLE RATE IS CORRECT 10000 Hz
+%%% WARNING: MAKE SURE EPHYS SAMPLE RATE IS CORRECT 10000 Hz
+
 settings = sensor_settings;
 ephys_SR = settings.sampRate;
 ball_SR = settings.sensorPollFreq;
@@ -51,9 +55,9 @@ plot(t_all{1}, ephys_all_A{1}, 'b');
 plot(t_all{1}, ephys_all_B{1}, 'g');
 xlim([XMIN XMAX]);
 
-
+linkaxes(ax, 'x')
 %% Extract Vm (filter out the spikes)
-FILT_FACTOR = 0.4;
+FILT_FACTOR = 0.04;
 
 VmFilt_A2_L = medfilt1( ephys_all_A{1}, FILT_FACTOR * ephys_SR, 'truncate' );
 VmFilt_A2_R = medfilt1( ephys_all_B{1}, FILT_FACTOR * ephys_SR, 'truncate' );
@@ -71,7 +75,309 @@ hold on;
 plot( t_all{1}(START:END), ephys_all_A{1}(START:END), 'b' );
 plot( t_all{1}(START:END), VmFilt_A2_L(START:END), 'g' );
 
+%% Correlation analysis: Using diff as a proxy for correlation 
+% Examine the difference of Vm
 
+Vm_diff = VmFilt_A2_L - VmFilt_A2_R;
+
+XLIM = 6;
+NBINS = 100;
+
+f = figure;
+subplot(3,1,1)
+hist(Vm_diff,NBINS);
+xlim([-1*XLIM XLIM]);
+title('A2 L/R Vm diff');
+
+subplot(3,1,2)
+hist(VmFilt_A2_L,NBINS);
+xlim([-1*XLIM XLIM]);
+title('A2 L Vm');
+
+subplot(3,1,3)
+hist(VmFilt_A2_R,NBINS);
+xlim([-1*XLIM XLIM]);
+title('A2 R Vm');
+xlabel('Vm (mV)');
+
+saveas(f, [analysis_path '/Vm_histograms.fig']);
+saveas(f, [analysis_path '/Vm_histograms.png']);
+
+%% Gauss unmix models
+Vm_diff = VmFilt_A2_L - VmFilt_A2_R;
+
+k = 2;
+GMModel_diff = fitgmdist(Vm_diff, k, 'Options', statset('Display', 'final'));
+
+GMModel_L = fitgmdist(VmFilt_A2_L, k, 'Options', statset('Display', 'final'));
+
+GMModel_R = fitgmdist(VmFilt_A2_R, k, 'Options', statset('Display', 'final'));
+
+%% Show Vm histograms for both neurons, overlayed with mixed gaussian fit
+
+f = figure;
+
+X = [-10:0.01:10];
+my_norm = [];
+
+subplot(3,1,1);
+% Normalize the density to match the total area of the histogram
+h = histogram(Vm_diff,500);
+binwidth = h.BinWidth;
+area = (length(Vm_diff) * binwidth) / 1.45;
+
+X = [-10:0.01:10];
+my_norm = [];
+for i = 1:k
+    my_norm(i,:) = area * normpdf(X, GMModel_diff.mu(i), GMModel_diff.Sigma(i));
+end
+
+xlim([-10 10]);
+hold on;
+for i = 1:k
+    plot(X, squeeze(my_norm(i,:))); 
+end
+title('L-R Vm diff');
+
+subplot(3,1,2)
+% Normalize the density to match the total area of the histogram
+h = histogram(VmFilt_A2_L,500);
+binwidth = h.BinWidth;
+area = (length(Vm_diff) * binwidth) / 1.45;
+
+X = [-10:0.01:10];
+my_norm = [];
+for i = 1:k
+    my_norm(i,:) = area * normpdf(X, GMModel_L.mu(i), GMModel_L.Sigma(i));
+end
+
+xlim([-10 10]);
+hold on;
+for i = 1:k
+    plot(X, squeeze(my_norm(i,:))); 
+end
+title('L Vm');
+
+subplot( 3, 1, 3 )
+% Normalize the density to match the total area of the histogram
+h = histogram( VmFilt_A2_R, 500 );
+binwidth = h.BinWidth;
+area = (length(Vm_diff) * binwidth) / 1.45;
+
+X = [-10:0.01:10];
+my_norm = [];
+for i = 1:k
+    my_norm(i,:) = area * normpdf(X, GMModel_R.mu(i), GMModel_R.Sigma(i));
+end
+
+xlim([-10 10]);
+hold on;
+for i = 1:k
+    plot(X, squeeze(my_norm(i,:))); 
+end
+title('R Vm');
+
+%% Correlation analysis: compare correlation and large Vm
+
+BIN_SIZE = 0.050; % s
+DT_EPHYS = ephys_SR * BIN_SIZE;
+DT_YAW   = ball_SR * BIN_SIZE;
+
+t_down = squeeze(mean(reshape(t_all{1}, [DT_EPHYS, length(t_all{1})/DT_EPHYS]), 1));
+A2_Vm_L_down = squeeze(mean(reshape(VmFilt_A2_L, [ DT_EPHYS, length(VmFilt_A2_L)/DT_EPHYS ] ),1));
+A2_Vm_R_down = squeeze(mean(reshape(VmFilt_A2_R, [ DT_EPHYS, length(VmFilt_A2_R)/DT_EPHYS ] ),1));
+
+yaw_all_down = squeeze(mean(reshape(yaw_all{1}, [ DT_YAW, length( yaw_all{1} )/DT_YAW ]),1));
+fwd_all_down = squeeze(mean(reshape(fwd_all{1}, [ DT_YAW, length( fwd_all{1} )/DT_YAW ]),1));
+
+% 5 Categories
+% 1. Large negative diff
+% 2. Large positive diff
+% 3. Small diff and large postitive Vm for both L and R
+% 4. Small diff and large negative Vm for both L and R
+% 5. Small diff and small Vm for both L and R
+
+CAT_COUNT = 5;
+yaw_cat = cell(1,CAT_COUNT);
+fwd_cat = cell(1,CAT_COUNT);
+L_cell = cell(1,CAT_COUNT);
+R_cell = cell(1,CAT_COUNT);
+for i = 1:CAT_COUNT
+    yaw_cat{i} = [];
+    fwd_cat{i} = [];
+    L_cell{i} = [];
+    R_cell{i} = [];
+end
+
+VM_LARGE_THRESHOLD = 2.0;
+VM_SMALL_THRESHOLD = 0.25;
+
+VM_DIFF_LARGE_THRESHOLD = 2.0;
+VM_DIFF_SMALL_THRESHOLD = 0.25;
+LOOK_BACK = 5;
+LOOK_AHEAD = 5;
+
+SHIFT_FACTOR = 3;
+
+L_cell_stat = [];
+R_cell_stat = [];
+yaw_stat = [];
+fwd_stat = [];
+
+L_cell_mv = [];
+R_cell_mv = [];
+yaw_mv = [];
+fwd_mv = [];
+STATIONARY_THRESHOLD = 0.25;
+MOVING_THRESHOLD = 0.5;
+
+for i = LOOK_BACK:length(t_down)-LOOK_AHEAD
+
+    cur_A2_Vm_L = A2_Vm_L_down( i );
+    cur_A2_Vm_R = A2_Vm_R_down( i );
+    cur_Vm_diff = cur_A2_Vm_L - cur_A2_Vm_R;
+    
+    cur_cat = -1;
+    
+    if(cur_Vm_diff > VM_DIFF_LARGE_THRESHOLD)
+        cur_cat = 1;
+    elseif(cur_Vm_diff < -1.0*VM_DIFF_LARGE_THRESHOLD)
+        cur_cat = 2;
+    elseif( (cur_Vm_diff > -1.0*VM_DIFF_SMALL_THRESHOLD) && (cur_Vm_diff < VM_DIFF_SMALL_THRESHOLD))
+        
+        if( ( cur_A2_Vm_L > VM_LARGE_THRESHOLD ) && ( cur_A2_Vm_R > VM_LARGE_THRESHOLD ))
+            cur_cat = 3;
+        elseif( ( cur_A2_Vm_L < -1.0*VM_LARGE_THRESHOLD ) && ( cur_A2_Vm_R < -1.0*VM_LARGE_THRESHOLD ))
+            cur_cat = 4;
+        elseif( ( cur_A2_Vm_L > -1.0*VM_SMALL_THRESHOLD ) && ( cur_A2_Vm_L < VM_SMALL_THRESHOLD ) && ...
+                ( cur_A2_Vm_R > -1.0*VM_SMALL_THRESHOLD ) && ( cur_A2_Vm_R < VM_SMALL_THRESHOLD ))            
+            cur_cat = 5;
+        end
+    end        
+    
+    if( cur_cat == -1 )
+        continue;
+    end
+        
+    L_cell{cur_cat}(end+1,:)  = A2_Vm_L_down(i-LOOK_BACK:i+LOOK_AHEAD);
+    R_cell{cur_cat}(end+1,:)  = A2_Vm_R_down(i-LOOK_BACK:i+LOOK_AHEAD);    
+
+    i_shift = i + SHIFT_FACTOR;
+    yaw_cat{cur_cat}(end+1,:) = yaw_all_down( i_shift-LOOK_BACK : i_shift+LOOK_AHEAD);
+    fwd_cat{cur_cat}(end+1,:) = fwd_all_down( i_shift-LOOK_BACK : i_shift+LOOK_AHEAD);
+    
+    % Divide category 3 trials by stationary to moving vs. moving
+    if( cur_cat == 3 )
+        cur_fwd = fwd_all_down( i_shift-LOOK_BACK : i_shift+LOOK_AHEAD);
+        
+        if( (mean(cur_fwd(1:LOOK_BACK)) < STATIONARY_THRESHOLD ) && (mean(cur_fwd(LOOK_BACK:LOOK_AHEAD)) > MOVING_THRESHOLD ))
+            L_cell_stat(end+1,:) = A2_Vm_L_down(i-LOOK_BACK:i+LOOK_AHEAD);
+            R_cell_stat(end+1,:)  = A2_Vm_R_down(i-LOOK_BACK:i+LOOK_AHEAD);
+            yaw_stat(end+1,:)  = yaw_all_down( i_shift-LOOK_BACK : i_shift+LOOK_AHEAD);
+            fwd_stat(end+1,:)  = fwd_all_down( i_shift-LOOK_BACK : i_shift+LOOK_AHEAD);            
+        elseif( (mean(cur_fwd(1:LOOK_BACK)) > MOVING_THRESHOLD ) && (mean(cur_fwd(LOOK_BACK:LOOK_AHEAD)) > MOVING_THRESHOLD ))
+            L_cell_mv(end+1,:) = A2_Vm_L_down(i-LOOK_BACK:i+LOOK_AHEAD);
+            R_cell_mv(end+1,:)  = A2_Vm_R_down(i-LOOK_BACK:i+LOOK_AHEAD);
+            yaw_mv(end+1,:)  = yaw_all_down( i_shift-LOOK_BACK : i_shift+LOOK_AHEAD);
+            fwd_mv(end+1,:)  = fwd_all_down( i_shift-LOOK_BACK : i_shift+LOOK_AHEAD);
+        end
+    end
+end
+
+f = figure('units','normalized','outerposition',[0 0 1 1])  
+cur_subplot_base = 1;
+t_event = [ -1.0*LOOK_BACK*BIN_SIZE : BIN_SIZE : LOOK_AHEAD*BIN_SIZE ];
+
+category_text = { 'Large + diff', 'Large - diff', ... 
+                  'Small diff and large + Vm, L & R', ...
+                  'Small diff and large - Vm, L & R', ...
+                  'Small diff and small Vm, L & R' };
+
+for c = 1:CAT_COUNT
+        
+    if(c == 1)
+        cur_subplots = [1 6 11 16];
+    elseif(c == 2)
+        cur_subplots = [2 7 12 17];
+    elseif(c == 3)
+        cur_subplots = [3 8 13 18];
+    elseif(c == 4)
+        cur_subplots = [4 9 14 19];
+    elseif(c == 5)
+        cur_subplots = [5 10 15 20];
+    end
+    
+    subplot(4,5,cur_subplots(1));
+    plot(t_event, mean( fwd_cat{c} ) );
+    ylabel('Fwd vel (mm/s)');
+    title([category_text{c} ]);
+    ylim([0 10])
+    legend(['Events: ' num2str(size(fwd_cat{c},1))]);
+
+    subplot(4,5,cur_subplots(2));
+    plot(t_event, mean( yaw_cat{c} ) );
+    ylabel('Yaw vel (deg/s)');
+    ylim([-150 150])
+    
+    subplot(4,5,cur_subplots(3));
+    plot(t_event, mean( L_cell{c} ) );
+    ylabel('Left cell Vm (mV)');
+    ylim([-3.0 3.0]);
+    
+    subplot(4,5,cur_subplots(4));
+    plot(t_event, mean( R_cell{c} ) );    
+    ylabel('Right cell Vm (mV)');
+    ylim([-3.0 3.0]);
+    xlabel('Time (s)');
+    
+    cur_subplot_base = cur_subplot_base + 4;
+end
+
+saveas(f, [analysis_path '/left_right_by_category.fig']);
+saveas(f, [analysis_path '/left_right_by_category.png']);
+
+f = figure;
+sub_idx = [1 3 5 7 2 4 6 8];
+subplot(4,2,sub_idx(1));
+plot(t_event, mean(fwd_stat));
+ylabel('Fwd vel (mm/s)');
+legend(['Events: ' num2str(size(fwd_stat,1))]);
+title('Stationary to moving');
+
+subplot(4,2,sub_idx(2));
+plot(t_event, mean(yaw_stat));
+ylabel('Yaw vel (deg/s)');
+
+subplot(4,2,sub_idx(3));
+plot(t_event, mean(L_cell_stat));
+ylabel('Left cell (mV)');
+
+subplot(4,2,sub_idx(4));
+plot(t_event, mean(R_cell_stat));
+ylabel('Right cell (mV)');
+xlabel('Time (s)');
+
+subplot(4,2,sub_idx(5));
+plot(t_event, mean(fwd_mv));
+ylabel('Fwd vel (mm/s)');
+legend(['Events: ' num2str(size(fwd_mv,1))]);
+title('Moving');
+
+subplot(4,2,sub_idx(6));
+plot(t_event, mean(yaw_mv));
+ylabel('Yaw vel (deg/s)');
+
+subplot(4,2,sub_idx(7));
+plot(t_event, mean(L_cell_mv));
+ylabel('Left cell (mV)');
+
+subplot(4,2,sub_idx(8));
+plot(t_event, mean(R_cell_mv));
+ylabel('Right cell (mV)');
+xlabel('Time (s)');
+
+saveas(f, [analysis_path '/moving_vs_stationary_category.fig']);
+saveas(f, [analysis_path '/moving_vs_stationary_category.png']);
 
 %% Hamming filter
 START = 1;
@@ -340,6 +646,7 @@ grid on;
 saveas(f,[analysis_path '/A2_right_left_PSTH_diff_div_vs_yaw_scatter.fig']);
 saveas(f,[analysis_path '/A2_right_left_PSTH_diff_div_vs_yaw_scatter.png']);
 
+%%
 f = figure;
 scatter3( A2_L_psth_choosen(1:mcnt), yaw_choosen(1:mcnt), A2_L_R_psth_choosen_diff );
 xlabel('A2 L psth (spike/s)');
@@ -433,6 +740,42 @@ title(['A2 left, right diff vs yaw with L,R PSTH = zero overlay (R^2 = ' num2str
 saveas(f, [analysis_path '/A2_left_right_diff_vs_yaw_with_left_PSTH_overlay_v2.fig']);
 saveas(f, [analysis_path '/A2_left_right_diff_vs_yaw_with_left_PSTH_overlay_v2.png']);
 
+%% Calculate avg yaw from a 2D histogram of the above plot
+
+PSTH_BINS = 50;
+YAW_BINS = 100;
+
+[N, c] = hist3( [A2_small_diff', A2_small_diff_yaw'], 'NBins', [PSTH_BINS YAW_BINS], 'CDataMode', 'auto', 'FaceColor', 'interp' );
+
+psth_N_weighted = N .* repmat(c{1}', [1 size(N,2)]);
+yaw_N_weighted = N .* repmat(c{2}, [size(N,1) 1]);
+
+weight_sum_yaw = sum(N,1);
+weight_sum_psth = sum(N,2);
+
+A1_psth_all_wavg_yaw_x = squeeze(sum(psth_N_weighted, 1)) ./ weight_sum_yaw;
+yaw_all_wavg_psth_x = sum(yaw_N_weighted, 2) ./ weight_sum_psth;
+
+f = figure;
+% subplot(2,1,1);
+% plot(c{2}, A1_psth_all_wavg_yaw_x);
+% ylim([0 100]);
+% xlim([-1000 1000]);
+% xlabel('Yaw (deg/s)');
+% ylabel('A2 L-R PSTH diff (spikes/s)');
+% 
+subplot(1,1,1);
+plot(c{1}, yaw_all_wavg_psth_x');
+%xlim([0 100]);
+ylim([-1000 1000]);
+grid on;
+ylabel('Yaw (deg/s)');
+xlabel('A2 L-R PSTH diff (spikes/s)');
+title(['Avg yaw for each A2 L-R diff bin (n bins= ' num2str(PSTH_BINS) ')']);
+
+saveas(f, [analysis_path '/A2_left_right_diff_vs_yaw_weighted_avg.fig']);
+saveas(f, [analysis_path '/A2_left_right_diff_vs_yaw_weighted_avg.png']);
+
 %% Compare various yaw distributions
 % a. when both cells are not firing
 % b. when both cells are firing a small amount (but not zero)
@@ -456,7 +799,7 @@ yaw_when_both_A2_PSTH_is_small = zeros(1,length(A2_L_R_psth_choosen_diff));
 yaw_when_both_A2_PSTH_is_small_cnt = 0;
 
 ZERO_CUTOFF = 0.1;
-SMALL_CUTOFF = 5;
+SMALL_CUTOFF = 10;
 
 for i = 1:length(A2_L_R_psth_choosen_diff)
     
@@ -489,7 +832,7 @@ subplot(3,1,3);
 hist(yaw_when_both_A2_PSTH_is_small(1:yaw_when_both_A2_PSTH_is_small_cnt), NBINS);
 title(['1 < L-R < ' num2str(SMALL_CUTOFF) ' spike/s, yaw mean: ' num2str(mean(yaw_when_both_A2_PSTH_is_small)) '  std: ' num2str(std(yaw_when_both_A2_PSTH_is_small)) ]);
 xlim([XMIN XMAX]);
-ylim([0 40]);
+ylim([0 80]);
 
 saveas(f, [analysis_path '/yaw_distribution_comparison.fig']);
 saveas(f, [analysis_path '/yaw_distribution_comparison.png']);
@@ -736,13 +1079,84 @@ saveas(f,[analysis_path '/A2_right_left_PSTH_scatter_with_yaw_overlay_v2.png']);
 %%
 % Plot a 2D histrogram for A2 L PSTH vs. A2 R PSTH
 f = figure;
-hist3([A2_L_choosen', A2_R_choosen']);
-xlabel('A2 L PSTH (spikes/s)');
-ylabel('A2 R PSTH (spikes/s)');
-zlabel('count');
-saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist_v2.fig']);
-saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist_v2.fig']);
 
+hist3([A2_L_choosen', A2_R_choosen'], 'NBins', [50 50], 'CDataMode','auto','FaceColor','interp' );
+xlabel('Left A2 PSTH (spikes/s)');
+ylabel('Right A2 PSTH (spikes/s)');
+zlabel('count');
+
+USE_JET = 1;
+if( USE_JET == 1 )
+    colormap( jet ); 
+else
+    colormap( gray ); 
+end
+
+caxis([0 70]);
+view(2)
+xlim([0 90]);
+ylim([0 90]);
+axis tight;
+h = colorbar('FontSize',11);
+ylabel(h, 'Counts');
+
+if( USE_JET == 1 )
+    saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist_v2_jet.fig']);
+    saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist_v2_jet.png']);
+else
+    saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist_v2_gray.fig']);
+    saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist_v2_gray.png']);
+end
+
+
+%%
+% Plot a 2D histrogram for A2 L PSTH vs. A2 R PSTH using log color scale
+f = figure;
+
+if 0
+hist3([A2_L_choosen', A2_R_choosen'], 'NBins', [50 50], 'CDataMode','auto','FaceColor','interp' );
+xlabel('Left A2 PSTH (spikes/s)');
+ylabel('Right A2 PSTH (spikes/s)');
+zlabel('count');
+colormap jet;
+colorbar;
+caxis([0 70]);
+view(2)
+axis tight;
+end
+
+c=[1 10 100 300];
+
+
+[N,cen] = hist3( [A2_L_choosen', A2_R_choosen'], 'NBins', [50 50] );
+
+imagesc(cen{1}([1 end]), cen{2}([1 end]), log(N));
+
+USE_JET = 0;
+if( USE_JET == 1 )
+    colormap( jet ); 
+else
+    colormap( gray ); 
+end
+
+caxis(log([c(1) c(length(c))]));
+h = colorbar('FontSize',11,'YTick',log(c),'YTickLabel',c);
+ylabel(h, 'Counts');
+
+xlabel('Left A2 PSTH (spikes/s)');
+ylabel('Right A2 PSTH (spikes/s)');
+zlabel('count');
+set(gca,'YDir','normal')
+xlim([0 85]);
+ylim([0 85]);
+
+if(USE_JET == 1)
+    saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist_logcolor_v2_jet.fig']);
+    saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist_logcolor_v2_jet.png']);
+else
+    saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist_logcolor_v2_gray.fig']);
+    saveas(f,[analysis_path '/A2_right_left_diff_PSTH_scatter_with_yaw_overlay_2D_hist_logcolor_v2_gray.png']);
+end
 
 %% Show relationship between left and right A2 neurons Vm difference and yaw
 
@@ -1109,10 +1523,168 @@ saveas( f, [analysis_path '/A2_psth_width_right_and_left_vs_yaw_scatter.fig'] );
 saveas( f, [analysis_path '/A2_psth_width_right_and_left_vs_yaw_scatter.png'] );
 
 
+%% Plot R^2 as a functin of shift factor
+BIN_SIZE = 0.05;
+DT_YAW   = ball_SR * BIN_SIZE;
 
 
+A2_L_psth_base = A2_L_psth;
+A2_R_psth_base = A2_R_psth;
+
+A2_L_psth_down = squeeze(mean(reshape( A2_L_psth_base, [ DT_YAW, length(A2_L_psth) / DT_YAW ] ), 1));
+A2_R_psth_down = squeeze(mean(reshape( A2_R_psth_base, [ DT_YAW, length(A2_L_psth) / DT_YAW ] ), 1));
+yaw_all_down = squeeze(mean(reshape( yaw_all{1}, [ DT_YAW, length( yaw_all{1} ) / DT_YAW ]), 1));
+fwd_all_down = squeeze(mean(reshape( fwd_all{1}, [ DT_YAW, length( yaw_all{1} ) / DT_YAW ]), 1));
+fwd_all_down_std = squeeze(std(reshape( fwd_all{1}, [ DT_YAW, length( yaw_all{1} ) / DT_YAW ]), 0, 1));
+
+SHIFT_MAX = 50;
+
+FWD_STD_THRESHOLD = 0.01;
+
+rsqr_per_shift = zeros( 1, SHIFT_MAX );
+
+for ss = 1:SHIFT_MAX
+    
+    cnt = 0;
+    A2_L_psth_choosen = zeros(1, length( A2_L_psth_down ));
+    A2_R_psth_choosen = zeros(1, length( A2_L_psth_down ));
+    yaw_choosen  = zeros(1, length( yaw_all_down ));
+    fwd_choosen  = zeros(1, length( yaw_all_down ));
+    
+    mcnt = 0;
+    
+    for i = 1:length( A2_L_psth_down )-(ss+1)
+        
+        cur_A2_L_psth = A2_L_psth_down( i );
+        cur_A2_R_psth = A2_R_psth_down( i );
+        
+        cur_fwd_std = fwd_all_down_std( i );
+        
+        if( abs(cur_fwd_std) < FWD_STD_THRESHOLD )
+            continue;
+        end
+        
+        A2_L_psth_choosen( mcnt+1 ) = cur_A2_L_psth;
+        A2_R_psth_choosen( mcnt+1 ) = cur_A2_R_psth;
+        yaw_choosen( mcnt+1 ) = yaw_all_down(i+ss);
+        fwd_choosen( mcnt+1 ) = fwd_all_down(i+ss);
+        mcnt = mcnt + 1;
+    end
+    
+    Y = yaw_choosen(1:mcnt);
+    X = A2_L_psth_choosen(1:mcnt) - A2_R_psth_choosen(1:mcnt);
+    [fobj, gof] = fit(X',Y', 'poly1');
+
+    rsqr_per_shift(ss) = gof.rsquare;
+end
+
+f = figure;
+plot( rsqr_per_shift );
+xlabel(['Shift amount (' num2str(BIN_SIZE) ' sec per unit)']);
+ylabel('R squared');
+title('R^2 value vs. shift factor');
+
+saveas(f, [analysis_path '/rsquare_vs_shift_factor.fig']);
+saveas(f, [analysis_path '/rsquare_vs_shift_factor.png']);
+
+%% 
+
+GREATER_PSTH_CUTOFF = 15;
+%LESSER_PSTH_CUTOFF = 10;
+LEFT_PSTH_CUTOFF = 40;
+RIGHT_PSTH_CUTOFF = LEFT_PSTH_CUTOFF;
+OTHER_PSTH_CUTOFF = 5;
+
+yaw_in_greater_cutoff = zeros(1, length(yaw_choosen));
+fwd_in_greater_cutoff = zeros(1, length(fwd_choosen));
+
+% yaw_in_lesser_cutoff = zeros(1, length(yaw_choosen));
+% fwd_in_lesser_cutoff = zeros(1, length(fwd_choosen));
+
+yaw_in_left_cutoff = zeros(1, length(yaw_choosen));
+fwd_in_left_cutoff = zeros(1, length(fwd_choosen));
+
+yaw_in_right_cutoff = zeros(1, length(yaw_choosen));
+fwd_in_right_cutoff = zeros(1, length(fwd_choosen));
+
+cur_g_idx = 1;
+cur_l_idx = 1;
+cur_left_idx = 1;
+cur_right_idx = 1;
+for i = 1:length(A2_L_psth_choosen)
+    
+    cur_L_psth = A2_L_psth_choosen(i);
+    cur_R_psth = A2_R_psth_choosen(i);
+    
+    if( (cur_L_psth > GREATER_PSTH_CUTOFF) && (cur_R_psth > GREATER_PSTH_CUTOFF) )
+        yaw_in_greater_cutoff(cur_g_idx) = yaw_choosen(i);
+        fwd_in_greater_cutoff(cur_g_idx) = fwd_choosen(i);  
+        cur_g_idx = cur_g_idx + 1;
+    end
+    
+    if( (cur_L_psth > LEFT_PSTH_CUTOFF) && (cur_R_psth < OTHER_PSTH_CUTOFF) )
+        yaw_in_left_cutoff(cur_left_idx) = yaw_choosen(i);
+        fwd_in_left_cutoff(cur_left_idx) = fwd_choosen(i);  
+        cur_left_idx = cur_left_idx + 1;
+    end
+    
+    if( (cur_R_psth > RIGHT_PSTH_CUTOFF) && (cur_L_psth < OTHER_PSTH_CUTOFF))
+        yaw_in_right_cutoff(cur_right_idx) = yaw_choosen(i);
+        fwd_in_right_cutoff(cur_right_idx) = fwd_choosen(i);  
+        cur_right_idx = cur_right_idx + 1;
+    end
+end
+
+NBINS = 60;
+f = figure('units','normalized','outerposition',[0 0 1 1]);
+
+subplot(2,3,1);
+hist( yaw_in_greater_cutoff(1:cur_g_idx), NBINS );
+xlabel('Yaw vel (deg/s)');
+ylabel('Count');
+title(['A2 left and right PSTH > ' num2str(GREATER_PSTH_CUTOFF)]);
+legend(['Mean: ' num2str(mean(yaw_in_greater_cutoff(1:cur_g_idx))) ' std: ' num2str(std(yaw_in_greater_cutoff(1:cur_g_idx))) ]);
 
 
+subplot(2,3,2);
+hist( yaw_in_left_cutoff(1:cur_left_idx), NBINS );
+xlabel('Yaw vel (deg/s)');
+ylabel('Count');
+title(['A2 left PSTH > ' num2str( LEFT_PSTH_CUTOFF ) ' right PSTH < ' num2str(OTHER_PSTH_CUTOFF)]);
+legend(['Mean: ' num2str(mean(yaw_in_left_cutoff(1:cur_left_idx))) ' std: ' num2str(std(yaw_in_left_cutoff(1:cur_left_idx))) ]);
+
+
+subplot(2,3,3);
+hist( yaw_in_right_cutoff(1:cur_right_idx), NBINS );
+xlabel('Yaw vel (deg/s)');
+ylabel('Count');
+title(['A2 right PSTH > ' num2str( RIGHT_PSTH_CUTOFF ) ' left PSTH < ' num2str(OTHER_PSTH_CUTOFF)]);
+legend(['Mean: ' num2str(mean(yaw_in_right_cutoff(1:cur_right_idx))) ' std: ' num2str(std(yaw_in_right_cutoff(1:cur_right_idx))) ]);
+
+
+subplot(2,3,4);
+hist( fwd_in_greater_cutoff(1:cur_g_idx), NBINS );
+xlabel('Fwd vel (mm/s)');
+ylabel('Count');
+legend(['Mean: ' num2str(mean(fwd_in_greater_cutoff(1:cur_g_idx))) ' std: ' num2str(std(fwd_in_greater_cutoff(1:cur_g_idx))) ]);
+
+
+subplot(2,3,5);
+hist( fwd_in_left_cutoff(1:cur_left_idx), NBINS );
+xlabel('Fwd vel (mm/s)');
+ylabel('Count');
+legend(['Mean: ' num2str(mean(fwd_in_left_cutoff(1:cur_left_idx))) ' std: ' num2str(std(fwd_in_left_cutoff(1:cur_left_idx))) ]);
+
+
+subplot(2,3,6);
+hist( fwd_in_right_cutoff(1:cur_right_idx), NBINS );
+xlabel('Fwd vel (mm/s)');
+ylabel('Count');
+legend(['Mean: ' num2str(mean(fwd_in_right_cutoff(1:cur_right_idx))) ' std: ' num2str(std(fwd_in_right_cutoff(1:cur_right_idx))) ]);
+
+
+saveas(f, [analysis_path '/yaw_fwd_hist_in_A2_left_right_mutual_PSTH_gcutoff_' num2str(GREATER_PSTH_CUTOFF) '_lcutoff_' num2str(LESSER_PSTH_CUTOFF) '.fig']);
+saveas(f, [analysis_path '/yaw_fwd_hist_in_A2_left_right_mutual_PSTH_gcutoff_' num2str(GREATER_PSTH_CUTOFF) '_lcutoff_' num2str(LESSER_PSTH_CUTOFF) '.png']);
 
 
 

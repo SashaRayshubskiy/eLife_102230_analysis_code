@@ -31,11 +31,11 @@ figure;
 hist(fwd_all{1}, 1000);
 
 %% Convert physiology to PSTH
-SPIKE_THRESHOLD_LAL_DN = 0.25;
+SPIKE_THRESHOLD_LAL_DN = 0.3;
 psth_dt_samples = ephys_SR/ball_SR;
 tic; A2_psth = calculate_psth_A2( t_all{1}, t_vel_all{1}, ephys_all_A{1}, ephys_SR, SPIKE_THRESHOLD_LAL_DN, psth_dt_samples ); toc;
 
-SPIKE_THRESHOLD_LAL_DN = 2.0;
+SPIKE_THRESHOLD_LAL_DN = 2.5;
 tic; A1_psth = calculate_psth_A1( t_all{1}, t_vel_all{1}, ephys_all_B{1}, ephys_SR, SPIKE_THRESHOLD_LAL_DN, psth_dt_samples ); toc;
 
 BIN_SIZE = 0.050; % ms
@@ -46,6 +46,284 @@ DT_YAW   = ball_SR * BIN_SIZE;
 yaw_t_down = squeeze(mean(reshape(t_vel_all{1}, [DT_YAW, length(t_vel_all{1})/DT_YAW]),1));
 A2_psth_down = squeeze(mean(reshape(A2_psth, [DT_YAW, length(A2_psth)/DT_YAW]),1));
 A1_psth_down = squeeze(mean(reshape(A1_psth, [DT_YAW, length(A1_psth)/DT_YAW]),1));
+
+%%
+f = figure;
+
+BEGIN = 1;
+END = 100000;
+
+my_ax(1) = subplot(3,1,1);
+plot(t_vel_all{1}(BEGIN:END)', fwd_all{1}(BEGIN:END)');
+
+my_ax(2) = subplot(3,1,2);
+plot(t_vel_all{1}(BEGIN:END)', yaw_all{1}(BEGIN:END)');
+
+my_ax(3) = subplot(3,1,3);
+hold on
+plot( t_vel_all{1}(BEGIN:END), A2_psth(BEGIN:END)' );
+plot( t_vel_all{1}(BEGIN:END), A1_psth(BEGIN:END)', 'g' );
+
+linkaxes(my_ax, 'x');
+axis tight;
+
+%xlim([200 220]);
+
+%% Isolate transitions from stationary to moving
+
+BIN_SIZE = 0.01; % s
+DT_EPHYS = ephys_SR * BIN_SIZE;
+DT_YAW   = ball_SR * BIN_SIZE;
+
+A2_Vm = squeeze(mean(reshape(VmFilt_A2_corr, [ DT_EPHYS, length(VmFilt_A2)/DT_EPHYS ] ),1));
+A1_Vm = squeeze(mean(reshape(VmFilt_A1_corr, [ DT_EPHYS, length(VmFilt_A1)/DT_EPHYS ] ),1));
+
+
+SAMPLE_CNT = length(A2_psth);
+%SAMPLE_CNT = 10000;
+
+FROM_STATIONARY_THRESHOLD = 2.0;
+FROM_MOVING_THRESHOLD = 0.001;
+STATIONARY_STATE = 11;
+MOVING_STATE = 12;
+
+FWD_LOOK_AHEAD = 50;
+WINDOW_SIZE = 5;
+
+fwd_stationary_to_moving = [];
+yaw_stationary_to_moving = [];
+A1_FR_stationary_to_moving = [];
+A2_FR_stationary_to_moving = [];
+A1_Vm_stationary_to_moving = [];
+A2_Vm_stationary_to_moving = [];
+
+LOOK_BACK = 70;
+LOOK_AHEAD = 50;
+   
+cur_fwd_std = std(fwd_all{1}(1:1+FWD_LOOK_AHEAD));
+cur_fwd_mean = mean(fwd_all{1}(1:1+FWD_LOOK_AHEAD));
+if(cur_fwd_std < STATIONARY_THRESHOLD)
+    cur_state = STATIONARY_STATE;
+else
+    cur_state = MOVING_STATE;
+end
+
+stationary_points = [];
+moving_points = [];
+
+transition_points = [];
+STATIONARY_STATE_CNT_THRESHOLD = 50;
+cur_stationary_state_cnt = 0;
+i = LOOK_BACK+1;
+FWD_MOVEMENT_THRESHOLD = 0.1;
+
+f = figure;
+while( i < (SAMPLE_CNT-LOOK_AHEAD) )
+    
+    cur_fwd = fwd_all{1}(i:i+FWD_LOOK_AHEAD);
+    cur_fwd_std = std(cur_fwd);
+
+    if(cur_state == STATIONARY_STATE)
+        
+        stationary_points(end+1) = i;
+        
+        if( cur_fwd_std > FROM_STATIONARY_THRESHOLD ) 
+            
+            % Mark as an event only if the fly is standing for some time
+            % And fwd velocity is positive
+            if( (cur_stationary_state_cnt > STATIONARY_STATE_CNT_THRESHOLD ) && (mean(cur_fwd) > 0.05 ))
+                
+                % Find the exact point of change
+                cur_change_interval = cur_fwd;
+                
+                hold on;
+                plot(cur_change_interval);
+                
+                prev_fwd_val = cur_change_interval(1);
+                center = i + 40;
+%                 for j = 2:length( cur_change_interval )
+%                     cur_fwd_val = cur_change_interval(j);
+%                     
+%                     if((cur_fwd_val - prev_fwd_val) > FWD_MOVEMENT_THRESHOLD )
+%                         center = center + j -1;
+%                         break;
+%                     end
+%                     prev_fwd_val = cur_fwd_val;
+%                 end
+                                
+                fwd_stationary_to_moving(end+1,:)    = fwd_all{1}( center-LOOK_BACK : center+LOOK_AHEAD );
+                yaw_stationary_to_moving(end+1,:)    = yaw_all{1}( center-LOOK_BACK : center+LOOK_AHEAD ) - mean(yaw_all{1}( center-LOOK_BACK : center));
+                A1_FR_stationary_to_moving(end+1,:)  = A1_psth( center-LOOK_BACK : center+LOOK_AHEAD );
+                A2_FR_stationary_to_moving(end+1,:)  = A2_psth( center-LOOK_BACK : center+LOOK_AHEAD );
+                A1_Vm_stationary_to_moving(end+1,:)  = A1_Vm( center-LOOK_BACK : center+LOOK_AHEAD );
+                A2_Vm_stationary_to_moving(end+1,:)  = A2_Vm( center-LOOK_BACK : center+LOOK_AHEAD );
+                transition_points(end+1) = i;
+            end
+            i = i + FWD_LOOK_AHEAD;            
+            cur_state = MOVING_STATE;
+        else
+            i = i + 1;
+        end
+        
+        cur_stationary_state_cnt = cur_stationary_state_cnt + 1;
+        
+    elseif(cur_state == MOVING_STATE) 
+        
+        moving_points(end+1) = i;
+
+        if( cur_fwd_std < FROM_MOVING_THRESHOLD )
+            cur_state = STATIONARY_STATE;
+            cur_stationary_state_cnt = 0;
+        end
+        i = i + 1;        
+    else
+        disp(['ERROR: state ' num2str(cur_state) ' not recognized']);
+    end
+end
+
+if 0
+f = figure;
+
+BEGIN = 1;
+END = SAMPLE_CNT;
+
+my_ax(1) = subplot(3,1,1);
+hold on;
+plot(t_vel_all{1}(BEGIN:END)', fwd_all{1}(BEGIN:END)');
+plot(t_vel_all{1}(stationary_points)', fwd_all{1}(stationary_points)', 'x', 'color', 'g');
+plot(t_vel_all{1}(moving_points)', fwd_all{1}(moving_points)', 'x', 'color', 'r');
+plot(t_vel_all{1}(transition_points)', fwd_all{1}(transition_points)', 'x', 'color', rgb('Magenta'), 'MarkerSize', 6, 'LineWidth', 3);
+
+my_ax(2) = subplot(3,1,2);
+plot(t_vel_all{1}(BEGIN:END)', yaw_all{1}(BEGIN:END)');
+
+my_ax(3) = subplot(3,1,3);
+hold on
+plot( t_vel_all{1}(BEGIN:END), A2_psth(BEGIN:END)' );
+plot( t_vel_all{1}(BEGIN:END), A1_psth(BEGIN:END)', 'g' );
+
+linkaxes(my_ax, 'x');
+axis tight;
+end
+
+%% Requires previous statement
+f = figure;
+
+event_cnt = size(fwd_stationary_to_moving, 1);
+
+t_event = [ -1.0*LOOK_BACK*0.01 : 0.01 : LOOK_AHEAD*0.01 ];
+
+left_yaw = [];
+left_fwd = [];
+left_A1 = [];
+left_A2 = [];
+left_A1_Vm = [];
+left_A2_Vm = [];
+
+right_yaw = [];
+right_fwd = [];
+right_A1 = [];
+right_A2 = [];
+right_A1_Vm = [];
+right_A2_Vm = [];
+
+for i = 1:event_cnt
+
+    cur_yaw = mean(yaw_stationary_to_moving(i,LOOK_BACK+1:LOOK_BACK+20));
+    if( cur_yaw > 0 )
+        cur_clr = rgb('Green');
+        left_yaw(end+1, :) = yaw_stationary_to_moving(i,:);
+        left_fwd(end+1, :) = fwd_stationary_to_moving(i,:);
+        left_A1(end+1, :)  = A1_FR_stationary_to_moving(i,:);
+        left_A2(end+1, :)  = A2_FR_stationary_to_moving(i,:);
+        left_A1_Vm(end+1, :)  = A1_Vm_stationary_to_moving(i,:);
+        left_A2_Vm(end+1, :)  = A2_Vm_stationary_to_moving(i,:);
+    else
+        cur_clr = rgb('Red');
+        right_yaw(end+1, :) = yaw_stationary_to_moving(i,:);
+        right_fwd(end+1, :) = fwd_stationary_to_moving(i,:);
+        right_A1(end+1, :)  = A1_FR_stationary_to_moving(i,:);
+        right_A2(end+1, :)  = A2_FR_stationary_to_moving(i,:);
+        right_A1_Vm(end+1, :)  = A1_Vm_stationary_to_moving(i,:);
+        right_A2_Vm(end+1, :)  = A2_Vm_stationary_to_moving(i,:);
+    end
+    
+    if 0
+    subplot(4,1,1);
+    hold on;
+    plot( t_event, fwd_stationary_to_moving(i,:), 'color', cur_clr );
+    
+    subplot(4,1,2);
+    hold on;
+    plot( t_event, yaw_stationary_to_moving(i,:), 'color', cur_clr );
+    
+    subplot(4,1,3);
+    hold on;
+    plot( t_event, A1_FR_stationary_to_moving(i,:), 'color', cur_clr );
+        
+    subplot(4,1,4);
+    hold on;
+    plot( t_event, A2_FR_stationary_to_moving(i,:), 'color', cur_clr );    
+    end
+end
+
+subplot(4,1,1);
+hold on;
+plot( t_event, squeeze(mean(left_fwd)), 'color', rgb('Red'));
+plot( t_event, squeeze(mean(right_fwd)), 'color', rgb('Green'));
+ylabel('Fwd vel (mm/s)');
+axis tight;
+legend(['Left turn events (' num2str(size(left_fwd,1)) ')'], ['Right turn events (' num2str(size(right_fwd,1)) ')']);
+
+
+subplot(4,1,2);
+hold on;
+plot( t_event, squeeze(mean(left_yaw)), 'color', rgb('Red'));
+plot( t_event, squeeze(mean(right_yaw)), 'color', rgb('Green'));
+ylabel('Yaw vel (deg/s)');
+axis tight;
+
+SHOW_VM = 1;
+if (SHOW_VM == 1)
+subplot(4,1,3);
+hold on;
+plot( t_event, squeeze(mean(left_A1_Vm)), 'color', rgb('Red'));
+plot( t_event, squeeze(mean(right_A1_Vm)), 'color', rgb('Green'));
+ylabel('A1 Vm (mV)');
+axis tight;
+xlabel('Time (s)');
+
+subplot(4,1,4);
+hold on;
+plot( t_event, squeeze(mean(left_A2_Vm)), 'color', rgb('Red'));
+plot( t_event, squeeze(mean(right_A2_Vm)), 'color', rgb('Green'));
+ylabel('A2 Vm (mV)');
+axis tight;
+xlabel('Time (s)');
+
+saveas(f, [ analysis_path '/A1_A2_stationary_to_moving_analysis_Vm.fig']);
+saveas(f, [ analysis_path '/A1_A2_stationary_to_moving_analysis_Vm.png']);
+
+else
+subplot(4,1,3);
+hold on;
+plot( t_event, squeeze(mean(left_A1)), 'color', rgb('Red'));
+plot( t_event, squeeze(mean(right_A1)), 'color', rgb('Green'));
+ylabel('A1 FR (spikes/s)');
+axis tight;
+
+subplot(4,1,4);
+hold on;
+plot( t_event, squeeze(mean(left_A2)), 'color', rgb('Red'));
+plot( t_event, squeeze(mean(right_A2)), 'color', rgb('Green'));
+ylabel('A2 FR (spikes/s)');
+axis tight;
+xlabel('Time (s)');
+
+saveas(f, [ analysis_path '/A1_A2_stationary_to_moving_analysis_FR.fig']);
+saveas(f, [ analysis_path '/A1_A2_stationary_to_moving_analysis_FR.png']);
+end
+
 
 
 %% Plot A1 vs A2 psth
@@ -66,11 +344,11 @@ FILT_FACTOR = 0.04;
 VmFilt_A2 = medfilt1( ephys_all_A{1}, FILT_FACTOR * ephys_SR, 'truncate' );
 VmFilt_A1 = medfilt1( ephys_all_B{1}, FILT_FACTOR * ephys_SR, 'truncate' );
 
-% VmFilt_A2_corr = VmFilt_A2 - mean(VmFilt_A2);
-% VmFilt_A1_corr = VmFilt_A1 - mean(VmFilt_A1);
+VmFilt_A2_corr = VmFilt_A2 - mean(VmFilt_A2);
+VmFilt_A1_corr = VmFilt_A1 - mean(VmFilt_A1);
 
-VmFilt_A2_corr = VmFilt_A2;
-VmFilt_A1_corr = VmFilt_A1;
+%VmFilt_A2_corr = VmFilt_A2;
+%VmFilt_A1_corr = VmFilt_A1;
 
 START = 1;
 END = 60 * ephys_SR;
@@ -760,4 +1038,312 @@ grid on;
 
 saveas( f, [analysis_path '/A1_A2_PSTH_diff_vs_fwd_scatter.fig'] );
 saveas( f, [analysis_path '/A1_A2_PSTH_diff_vs_fwd_scatter.png'] );
+
+%% 
+
+BIN_SIZE = 0.05;
+DT_YAW   = ball_SR * BIN_SIZE;
+
+%A2_L_psth_base = A2_L_psth - mean(A2_L_psth);
+%A2_R_psth_base = A2_R_psth - mean(A2_R_psth);
+
+A2_psth_base = A2_psth;
+A1_psth_base = A1_psth;
+
+A2_psth_down = squeeze(mean(reshape( A2_psth_base, [ DT_YAW, length(A2_psth_base) / DT_YAW ] ), 1));
+A1_psth_down = squeeze(mean(reshape( A1_psth_base, [ DT_YAW, length(A2_psth_base) / DT_YAW ] ), 1));
+yaw_all_down = squeeze(mean(reshape( yaw_all{1}, [ DT_YAW, length( yaw_all{1} ) / DT_YAW ]), 1));
+fwd_all_down = squeeze(mean(reshape( fwd_all{1}, [ DT_YAW, length( yaw_all{1} ) / DT_YAW ]), 1));
+% fwd_all_down = squeeze(mean(reshape( fwd_all{1}, [ DT_YAW, length( yaw_all{1} ) / DT_YAW ]), 1));
+fwd_all_down_std = squeeze(std(reshape( fwd_all{1}, [ DT_YAW, length( yaw_all{1} ) / DT_YAW ]), 0, 1));
+
+% figure;
+% hist(fwd_all_down_std, 1000);
+
+cnt = 0;
+A2_psth_choosen = zeros(1, length( A2_psth_down ));
+A1_psth_choosen = zeros(1, length( A2_psth_down ));
+yaw_choosen  = zeros(1, length( yaw_all_down ));
+fwd_choosen  = zeros(1, length( yaw_all_down ));
+
+PSTH_BASELINE_CUTOFF = 1.0;
+SHIFT_FACTOR = 3;
+mcnt = 0;
+
+WINDOW_SIZE = 5;
+FWD_STD_THRESHOLD = 0.01;
+
+for i = 1:length( A2_psth_down )-(SHIFT_FACTOR+1)-WINDOW_SIZE
+    
+    cur_A2_psth = A2_psth_down( i );
+    cur_A1_psth = A1_psth_down( i );
+    
+    cur_fwd_std = fwd_all_down_std( i );
+    
+    if( abs(cur_fwd_std) < FWD_STD_THRESHOLD )
+       continue; 
+    end
+    
+%    if( (( cur_A2_L_psth <= -1.0*PSTH_BASELINE_CUTOFF ) || ( cur_A2_L_psth >= PSTH_BASELINE_CUTOFF )) && ...
+%        (( cur_A2_R_psth <= -1.0*PSTH_BASELINE_CUTOFF ) || ( cur_A2_R_psth >= PSTH_BASELINE_CUTOFF )) )
+        A2_psth_choosen( mcnt+1 ) = cur_A2_psth;
+        A1_psth_choosen( mcnt+1 ) = cur_A1_psth;
+        yaw_choosen( mcnt+1 ) = yaw_all_down(i+SHIFT_FACTOR);
+        fwd_choosen( mcnt+1 ) = fwd_all_down(i+SHIFT_FACTOR);
+        mcnt = mcnt + 1;
+%    end        
+end
+
+
+GREATER_PSTH_CUTOFF = 25;
+LESSER_PSTH_CUTOFF = 5;
+A1_PSTH_CUTOFF = 25;
+A2_PSTH_CUTOFF = A1_PSTH_CUTOFF;
+OTHER_PSTH_CUTOFF = 5;
+
+yaw_in_greater_cutoff = zeros(1, length(yaw_choosen));
+fwd_in_greater_cutoff = zeros(1, length(fwd_choosen));
+
+yaw_in_lesser_cutoff = zeros(1, length(yaw_choosen));
+fwd_in_lesser_cutoff = zeros(1, length(fwd_choosen));
+
+yaw_in_A1_cutoff = zeros(1, length(yaw_choosen));
+fwd_in_A1_cutoff = zeros(1, length(fwd_choosen));
+
+yaw_in_A2_cutoff = zeros(1, length(yaw_choosen));
+fwd_in_A2_cutoff = zeros(1, length(fwd_choosen));
+
+cur_g_idx = 1;
+cur_l_idx = 1;
+cur_A1_idx = 1;
+cur_A2_idx = 1;
+for i = 1:length(A2_L_psth_choosen)
+    
+    cur_A2_psth = A2_psth_choosen(i);
+    cur_A1_psth = A1_psth_choosen(i);
+    
+    if( (cur_A2_psth > GREATER_PSTH_CUTOFF) && (cur_A1_psth > GREATER_PSTH_CUTOFF) )
+        yaw_in_greater_cutoff(cur_g_idx) = yaw_choosen(i);
+        fwd_in_greater_cutoff(cur_g_idx) = fwd_choosen(i);  
+        cur_g_idx = cur_g_idx + 1;
+    end
+    
+    if( (cur_A2_psth < LESSER_PSTH_CUTOFF) && (cur_A1_psth < LESSER_PSTH_CUTOFF) )
+        yaw_in_lesser_cutoff(cur_l_idx) = yaw_choosen(i);
+        fwd_in_lesser_cutoff(cur_l_idx) = fwd_choosen(i);  
+        cur_l_idx = cur_l_idx + 1;
+    end
+    
+    if( (cur_A2_psth > A2_PSTH_CUTOFF) )
+        yaw_in_A2_cutoff(cur_A2_idx) = yaw_choosen(i);
+        fwd_in_A2_cutoff(cur_A2_idx) = fwd_choosen(i);  
+        cur_A2_idx = cur_A2_idx + 1;
+    end
+    
+    if( (cur_A1_psth > A1_PSTH_CUTOFF) )
+        yaw_in_A1_cutoff(cur_A1_idx) = yaw_choosen(i);
+        fwd_in_A1_cutoff(cur_A1_idx) = fwd_choosen(i);  
+        cur_A1_idx = cur_A1_idx + 1;
+    end
+end
+
+NBINS = 60;
+f = figure('units','normalized','outerposition',[0 0 1 1]);
+
+subplot(2,4,1);
+hist( yaw_in_greater_cutoff(1:cur_g_idx), NBINS );
+xlabel('Yaw vel (deg/s)');
+ylabel('Count');
+title(['A2 and A1 PSTH > ' num2str(GREATER_PSTH_CUTOFF)]);
+legend(['Mean: ' num2str(mean(yaw_in_greater_cutoff(1:cur_g_idx))) ' std: ' num2str(std(yaw_in_greater_cutoff(1:cur_g_idx))) ]);
+
+
+subplot(2,4,2);
+hist( yaw_in_lesser_cutoff(1:cur_l_idx), NBINS );
+xlabel('Yaw vel (deg/s)');
+ylabel('Count');
+title(['A2 and A1 PSTH < ' num2str(LESSER_PSTH_CUTOFF)]);
+legend(['Mean: ' num2str(mean(yaw_in_left_cutoff(1:cur_l_idx))) ' std: ' num2str(std(yaw_in_left_cutoff(1:cur_l_idx))) ]);
+
+subplot(2,4,3);
+hist( yaw_in_A2_cutoff(1:cur_g_idx), NBINS );
+xlabel('Yaw vel (deg/s)');
+ylabel('Count');
+title(['A2 PSTH > ' num2str(A2_PSTH_CUTOFF)]);
+legend(['Mean: ' num2str(mean(yaw_in_A2_cutoff(1:cur_A2_idx))) ' std: ' num2str(std(yaw_in_A2_cutoff(1:cur_A2_idx))) ]);
+
+subplot(2,4,4);
+hist( yaw_in_A1_cutoff(1:cur_g_idx), NBINS );
+xlabel('Yaw vel (deg/s)');
+ylabel('Count');
+title(['A1 PSTH > ' num2str(A2_PSTH_CUTOFF)]);
+legend(['Mean: ' num2str(mean(yaw_in_A1_cutoff(1:cur_A1_idx))) ' std: ' num2str(std(yaw_in_A1_cutoff(1:cur_A1_idx))) ]);
+
+
+
+subplot(2,4,5);
+hist( fwd_in_greater_cutoff(1:cur_g_idx), NBINS );
+xlabel('Fwd vel (mm/s)');
+ylabel('Count');
+legend(['Mean: ' num2str(mean(fwd_in_greater_cutoff(1:cur_g_idx))) ' std: ' num2str(std(fwd_in_greater_cutoff(1:cur_g_idx))) ]);
+
+
+subplot(2,4,6);
+hist( fwd_in_lesser_cutoff(1:cur_l_idx), NBINS );
+xlabel('Fwd vel (mm/s)');
+ylabel('Count');
+legend(['Mean: ' num2str(mean(fwd_in_lesser_cutoff(1:cur_l_idx))) ' std: ' num2str(std(fwd_in_lesser_cutoff(1:cur_l_idx))) ]);
+
+subplot(2,4,7);
+hist( fwd_in_A2_cutoff(1:cur_g_idx), NBINS );
+xlabel('Fwd vel (mm/s)');
+ylabel('Count');
+legend(['Mean: ' num2str(mean(fwd_in_A2_cutoff(1:cur_A2_idx))) ' std: ' num2str(std(fwd_in_A2_cutoff(1:cur_A2_idx))) ]);
+
+subplot(2,4,8);
+hist( fwd_in_A1_cutoff(1:cur_g_idx), NBINS );
+xlabel('Fwd vel (mm/s)');
+ylabel('Count');
+legend(['Mean: ' num2str(mean(fwd_in_A1_cutoff(1:cur_A1_idx))) ' std: ' num2str(std(fwd_in_A1_cutoff(1:cur_A1_idx))) ]);
+
+saveas(f, [analysis_path '/yaw_fwd_hist_in_A2_A1_mutual_PSTH_gcutoff_' num2str(GREATER_PSTH_CUTOFF) '_lcutoff_' num2str(LESSER_PSTH_CUTOFF) '.fig']);
+saveas(f, [analysis_path '/yaw_fwd_hist_in_A2_A1_mutual_PSTH_gcutoff_' num2str(GREATER_PSTH_CUTOFF) '_lcutoff_' num2str(LESSER_PSTH_CUTOFF) '.png']);
+
+
+%%
+
+f = figure;
+scatter(yaw_in_greater_cutoff, fwd_in_greater_cutoff, 3);
+xlabel('Yaw (deg/s)');
+ylabel('Fwd (mm/s)');
+title(['A2 and A1 FR > ' num2str(GREATER_PSTH_CUTOFF)]);
+saveas(f, [analysis_path '/yaw_fwd_scatter_when_A2_A1_FR_gcutoff_' num2str(GREATER_PSTH_CUTOFF) '.fig']);
+saveas(f, [analysis_path '/yaw_fwd_scatter_when_A2_A1_FR_gcutoff_' num2str(GREATER_PSTH_CUTOFF) '.png']);
+
+%% Plot yaw vs. fwd with A1 FR overlay
+
+RBC_SIZE_A1 = 30;
+RBC_SIZE_A2 = 50;
+
+BIN_SIZE = 0.05;
+DT_YAW   = ball_SR * BIN_SIZE;
+
+A1_psth_down = squeeze(mean(reshape( A1_psth, [ DT_YAW, length(A2_psth)/DT_YAW ] ),1));
+A2_psth_down = squeeze(mean(reshape( A2_psth, [ DT_YAW, length(A2_psth)/DT_YAW ] ),1));
+yaw_all_down = squeeze(mean(reshape( yaw_all{1}, [ DT_YAW, length( yaw_all{1} )/DT_YAW ]),1));
+fwd_all_down = squeeze(mean(reshape( fwd_all{1}, [ DT_YAW, length( yaw_all{1} )/DT_YAW ]),1));
+
+rbc_A1 = jet(RBC_SIZE_A1);
+rbc_A2 = jet(RBC_SIZE_A2);
+SHIFT_FACTOR = 3;
+hold on;
+
+fwd_choosen = zeros( 1, length(A2_psth_down) );
+yaw_choosen = zeros( 1, length(A2_psth_down) );
+A2_colors_choosen = zeros( length(A2_psth_down), 3 );
+A1_colors_choosen = zeros( length(A2_psth_down), 3 );
+
+YAW_CUTOFF = 250;
+cnt = 0;
+for i = 1:length(A2_psth_down)-SHIFT_FACTOR
+    
+    cur_A1_fr = A1_psth_down( i );
+    cur_rbc_index_A1 = ceil(cur_A1_fr);
+    
+    if( cur_rbc_index_A1 < 1 )
+        cur_rbc_index_A1 = 1;
+    elseif( cur_rbc_index_A1 > RBC_SIZE_A1 )
+        cur_rbc_index_A1 = RBC_SIZE_A1;
+    end
+    
+    cur_clr_A1 = rbc_A1( cur_rbc_index_A1, : );
+
+    cur_A2_fr = A2_psth_down( i );
+    cur_rbc_index_A2 = ceil(cur_A2_fr);
+    
+    if( cur_rbc_index_A2 < 1 )
+        cur_rbc_index_A2 = 1;
+    elseif( cur_rbc_index_A2 > RBC_SIZE_A2 )
+        cur_rbc_index_A2 = RBC_SIZE_A2;
+    end
+    
+    cur_clr_A2 = rbc_A2( cur_rbc_index_A2, : );
+    
+    A1_colors_choosen( cnt+1, : ) = cur_clr_A1;
+    A2_colors_choosen( cnt+1, : ) = cur_clr_A2;
+    fwd_choosen(cnt+1) = fwd_all_down( i + SHIFT_FACTOR );
+    yaw_choosen(cnt+1) = yaw_all_down( i + SHIFT_FACTOR );
+    cnt = cnt + 1;
+end
+
+f = figure;
+subplot(1,2,1)
+rbc = jet(RBC_SIZE_A1);
+scatter3( yaw_choosen, fwd_choosen, A1_psth_down);
+colormap('jet')
+h = colorbar;
+view(2)
+caxis([0 RBC_SIZE_A1]);
+grid on;
+xlabel('Yaw (deg/s)');
+ylabel('Fwd (mm/s)');
+title(['A1 FR color overlay ']);
+
+subplot(1,2,2)
+rbc = jet(RBC_SIZE_A2);
+scatter3( yaw_choosen, fwd_choosen, A2_psth_down);
+view(2);
+colormap('jet')
+h = colorbar;
+caxis([0 RBC_SIZE_A2]);
+grid on;
+xlabel('Yaw (deg/s)');
+ylabel('Fwd (mm/s)');
+title(['A2 FR color overlay ']);
+
+%saveas(f,[analysis_path '/A1_A2_PSTH_scatter_with_yaw_overlay_cutoff_' num2str(YAW_CUTOFF) '.fig']);
+%saveas(f,[analysis_path '/A1_A2_PSTH_scatter_with_yaw_overlay_cutoff_' num2str(YAW_CUTOFF) '.png']);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

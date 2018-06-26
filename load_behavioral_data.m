@@ -42,7 +42,7 @@ for sid = sids
         
         trial_type_idx = -1;
 
-        if((strcmp(trial_type, 'LeftOdor') == 1) | (strcmp(trial_type, '2pStim') == 1) | (strcmp(trial_type, 'OdorLeftWind') == 1) )
+        if((strcmp(trial_type, 'LeftOdor') == 1) | (strcmp(trial_type, '2pStim') == 1) | (strcmp(trial_type, 'OdorLeftWind') == 1) | (strcmp(trial_type, 'PicoPump') == 1) )
             trial_type_idx = 1;        
         elseif( (strcmp(trial_type, 'RightOdor') == 1) | (strcmp(trial_type, 'OdorRightWind') == 1) )
             trial_type_idx = 2;
@@ -55,7 +55,7 @@ for sid = sids
         
         load_path = [ datapath slash filename ];
         raw_data = load( load_path );
-        %disp(['Loaded file: ' load_path]);
+        disp(['Loaded file: ' load_path]);
         
         rid = bdata_idx_per_type(trial_type_idx);
 

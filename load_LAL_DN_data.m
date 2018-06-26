@@ -83,9 +83,9 @@ for d = 1:dataset_cnt
         tmp_yaw_all = vertcat( tmp_yaw_all, vel_yaw' );
         
         tmp_fwd_all = vertcat( tmp_fwd_all, vel_forward' );
-        
-        voltageA = voltageA - mean(voltageA);
-        voltageB = voltageB - mean(voltageB);
+
+%         voltageA = voltageA - mean(voltageA);
+%         voltageB = voltageB - mean(voltageB);
         
         tmp_ephys_all_A = vertcat( tmp_ephys_all_A, voltageA );
         tmp_ephys_all_B = vertcat( tmp_ephys_all_B, voltageB );
