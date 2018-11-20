@@ -1,4 +1,4 @@
-function [ cdata_raw, cdata_meta, trial_metadata ] = load_imaging_data( sids, datapath, trial_type_cnt, dx, dy, dt )
+function [ cdata_raw, cdata_meta, trial_metadata ] = load_imaging_data_hack( sids, datapath, trial_type_cnt, dx, dy, dt )
 
 % Inputs:
 % sids - array or a single SID of the trials to load
@@ -113,13 +113,25 @@ else
 end
 
 tifpath = [ datapath slash files(1).name ];
-tifObj = Tiff(tifpath,'r');
 
-frameString = tifObj.getTag('ImageDescription');
-cdata_meta.frame_rate = si51_frame_string_get_value_for_key(frameString, 'hRoiManager.scanFrameRate');
-cdata_meta.volume_rate = 1.0/si51_frame_string_get_value_for_key(frameString, 'hFastZ.period');
+siTif = ScanImageTiffReader( tifpath );
 
-tifObj.close();
+frameString = siTif.metadata();
+
+cdata_meta.frame_rate = si51_frame_string_get_value_for_key(frameString, 'SI.hRoiManager.scanFrameRate');
+cdata_meta.volume_rate = si51_frame_string_get_value_for_key(frameString, 'SI.hRoiManager.scanVolumeRate');
+
+siTif.close();
+
+% tifObj = Tiff(tifpath,'r');
+% 
+% frameString = tifObj.getTag('ImageDescription');
+% %cdata_meta.frame_rate = si51_frame_string_get_value_for_key(frameString, 'hRoiManager.scanFrameRate');
+% %cdata_meta.volume_rate = 1.0/si51_frame_string_get_value_for_key(frameString, 'hFastZ.period');
+% cdata_meta.frame_rate = 198.45;
+% cdata_meta.volume_rate = 12.1;
+% 
+% tifObj.close();
 
 end
 

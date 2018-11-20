@@ -14,8 +14,8 @@ for trial_type = 1:length(bdata_vel)
         vel_yaw = bdata_vel{trial_type}( trial, ac.VEL_YAW, : );
         vel_side = bdata_vel{trial_type}( trial, ac.VEL_SIDE, : );
         
-        [disp_x, disp_y, theta] = calculate_fly_position_with_yaw( vel_fwd, vel_side, vel_yaw, dt, 0, 0, 0);
-        %[disp_x, disp_y] = calculate_fly_position_no_yaw(vel_forward, vel_side, dt, 0, 0);
+        %[disp_x, disp_y, theta] = calculate_fly_position_with_yaw( vel_fwd, vel_side, vel_yaw, dt, 0, 0, 0);
+        [disp_x, disp_y] = calculate_fly_position_no_yaw(vel_fwd, vel_side, dt, 0, 0);
         
         traj{ trial_type }( trial, 1, : ) = disp_x;
         traj{ trial_type }( trial, 2, : ) = disp_y;        

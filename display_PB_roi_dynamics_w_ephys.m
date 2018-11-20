@@ -1,4 +1,4 @@
-function display_PB_roi_dynamics( EPG_data, PEN_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid )
+function display_PB_roi_dynamics_w_ephys( EPG_data, PEN_data,  ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid )
 
 SKIP_PEN = 0;
 if(length(PEN_data) == 0)
@@ -12,7 +12,7 @@ rois = get_rois(squeeze(mean(squeeze(mean(EPG_data(:,:,:,:),4)),1)), analysis_pa
 ysize = size(EPG_data,2);
 xsize = size(EPG_data,3);
 nframes = size(EPG_data,4);
-[x, y] = meshgrid(1:xsize, 1:ysize);
+[x, y] = meshgrid(1:xsize, 1:ysize);        
 
 num_trials = size(EPG_data, 1);
 %num_trials = 3;
@@ -103,27 +103,35 @@ end
 
 yaw_all = [];
 yaw_time_all = [];
-dt_bvel = bdata_vel_time(2) - bdata_vel_time(1);
 
-pre_stim = 3.0;
-post_stim = 3.0 + 0.02;
+ephys_data_all = [];
+ephys_time_all = [];
+
+dt_bvel = bdata_vel_time(2) - bdata_vel_time(1);
+dt_ephys_t = ephys_time(2) - ephys_time(1);
+
+pre_stim = 5.0;
+post_stim = pre_stim + 0.05;
 
 for j = 1:length(trials_to_include)
     
     tr = trials_to_include(j);
     
-    cur_yaw = squeeze(bdata_vel{ 1 }( tr, ac.VEL_YAW, : ));    
+    cur_yaw = squeeze(bdata_vel{ 1 }( tr, ac.VEL_YAW, : ));       
     yaw_all = horzcat( yaw_all, cur_yaw' );
+    
+    cur_ephys = squeeze(ephys_data{ 1 }( tr, : ));       
+    ephys_data_all = horzcat( ephys_data_all, cur_ephys' );
 
     if( length(yaw_time_all) == 0 )
         yaw_time_all = horzcat( yaw_time_all, bdata_vel_time );
+        ephys_time_all = horzcat( ephys_time_all, ephys_time );
     else
         yaw_time_all = horzcat( yaw_time_all, bdata_vel_time + (yaw_time_all(end)+dt_bvel) );        
+        ephys_time_all = horzcat( ephys_time_all, (ephys_time + ephys_time_all(end)+dt_ephys_t) );        
     end
 end
 
-pre_stim = 3.0;
-post_stim = 3.0 + 0.05;
 stim_all = [];
 t = [0:nframes-1]./VPS;
 stim_t = find( (t >= pre_stim) & (t <=  post_stim) );
@@ -200,21 +208,23 @@ PEN_roi_all(end+1,:) = stim_all;
 f = figure;
 
 if( SKIP_PEN == 0 )    
-    ax(1) = subplot(3,1,1);
+    ax(1) = subplot(4,1,1);
     imagesc( time_all, [1:size(EPG_roi_all,1)], EPG_roi_all );
     colormap(flipud(gray));
     caxis([-0.5 1.5]);
     %colorbar;
     
-    ax(2) = subplot(3,1,2);
+    ax(2) = subplot(4,1,2);
     imagesc( time_all, [1:size(EPG_roi_all,1)], PEN_roi_all );
     colormap(flipud(gray));
     caxis([-0.5 1.5]);
     %colorbar;
     
-    ax(3) = subplot(3,1,3);
+    ax(3) = subplot(4,1,3);
     plot( yaw_time_all, yaw_all );
 
+    ax(4) = subplot(4,1,4);
+    plot( ephys_time_all, ephys_data_all );        
 else
     ax(1) = subplot(2,1,1);
     colormap(flipud(gray));
@@ -262,8 +272,8 @@ for r = 1:length(rois)
     plot( t, avg_in_roi, 'DisplayName', [ 'roi: ' num2str(r)] );
 end
 
-stim_start = 3.0;
-stim_stop = 3.05;
+stim_start = pre_stim;
+stim_stop = post_stim;
 yy = ylim;
 y_min = yy(1); y_max = yy(2);
 hh = fill([ stim_start stim_start stim_stop stim_stop ],[y_min y_max y_max y_min ], rgb('Wheat'));
