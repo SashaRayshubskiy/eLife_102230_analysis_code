@@ -99,51 +99,20 @@ START_PLANE = 5;
 EPG_data_1       = squeeze(cdata_raw{1}( :, :, :, 1, START_PLANE:end, : ));
 % Get max for each plane
 EPG_data = squeeze(max(EPG_data_1, [], 4));
-% Dont run if only one channel saved
-PEN_Alexa_data   = squeeze(cdata_raw{1}( :, :, :, 2, START_PLANE:end, : ));
-PEN_data = squeeze(max(PEN_Alexa_data, [], 4));
-
-%% USE FOR 1 CHANNEL DATA: Pre-process time consuming parts of the analysis
-% Drop the first 4 planes
-% trials, x, y, color, plane, time
-EPG_data_1       = squeeze(cdata_raw{1}( :, :, :, 5:end, : ));
-% Get max for each plane
-EPG_data = squeeze(max(EPG_data_1, [], 4));
-
-%% 2 channel 
-display_PB_roi_dynamics( EPG_data, PEN_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid );
-
-%% 2 Channel with ephys
-display_PB_roi_dynamics_w_ephys( EPG_data, PEN_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid );
-
-%% 2 Channel with ephys and analysis of bump dynamics with left/right trial classification.
-
-pre_stim = 15.0;
-stim_dur = 0.05;        
-
-[df_f_in_roi_per_trial] = display_PB_roi_dynamics_w_ephys_w_bump_analysis( EPG_data, PEN_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid, pre_stim, stim_dur );
-
-%% Special left half PB glomeruli code, 2 channel with ephys and analysis of bump dynamics with left/right trial classification.
-
-pre_stim = 15.0;
-stim_dur = 0.05;        
-
-[df_f_in_roi_per_trial] = display_left_PB_glomeruli_dynamics_w_ephys_w_bump_analysis( EPG_data_1, PEN_Alexa_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid, pre_stim, stim_dur );
-
-%% Code for manual pico stim
-
-[df_f_in_roi_per_trial] = display_left_PB_glomeruli_dynamics_var_stim( EPG_data_1, PEN_Alexa_data, pico_stim_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid );
-
-%% 
-display_bump_dynamics_turning_ephys( df_f_in_roi_per_trial, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid, pre_stim, stim_dur );
-
-%% Bump dynamics with yaw and ephys with variable stim
-
-display_bump_dynamics_turning_ephys_var_stim( df_f_in_roi_per_trial, pico_stim_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid );
 
 
-%% 1 channel
-display_PB_roi_dynamics( EPG_data, [], bdata_vel_time, bdata_vel, VPS, analysis_path, sid );
+%% Display EPG bump, yaw, and ephys on the same plot for quick view of experiment
+[df_f_in_roi_per_trial] = display_EB_dynamics_var_stim( EPG_data_1, pico_stim_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid );
+
+%% Plot avg yaw and ephys, triggered on stim onset
+display_avg_yaw_ephys_triggered_on_stim_onset( EPG_data_1, pico_stim_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid );
+
+
+%% Plot avg yaw and ephys, triggered on bump return onset
+
+
+
+
 
 %%  Analyze Vm vs. yaw
 FILT_FACTOR = 0.04;
@@ -218,104 +187,13 @@ ylabel('Yaw (au)');
 saveas(f,[analysis_path '/Vm_vs_yaw_spontaneous_CX_turning_' num2str(sid) '.fig']);
 saveas(f,[analysis_path '/Vm_vs_yaw_spontaneous_CX_turning_' num2str(sid) '.png']);
 
-%%
-traj = get_single_trial_trajectories( sid, bdata_vel_time, bdata_vel );
 
-num_trials = size(traj{1},1);
-
-%TRIAL_MAX = 6;
-TRIAL_MAX = num_trials;
-
-f = figure;
-cm = colormap(jet(TRIAL_MAX));
-hold on;
-for tr = 1:TRIAL_MAX
-    disp_x = squeeze(traj{1}(tr,1,:));
-    disp_y = squeeze(traj{1}(tr,2,:));
-    plot(disp_x, disp_y, 'color', cm(tr,:), 'DisplayName', ['trial: ' num2str(tr)]);
-end
-
-legend();
-xlabel('X displacement (au)');
-ylabel('Y displacement (au)');
-
-saveas(f,[analysis_path '/running_trajectories_' num2str(sid) '_max_trials_' num2str( TRIAL_MAX ) '.fig']);
-saveas(f,[analysis_path '/running_trajectories_' num2str(sid) '_max_trials_' num2str( TRIAL_MAX ) '.png']);
-
-%% Exploring large right turns
-
-f = figure;
-tr = 11;
-disp_x = squeeze(traj{1}(tr,1,:));
-disp_y = squeeze(traj{1}(tr,2,:));
-plot3( disp_x, disp_y, bdata_vel_time, 'color', cm(tr,:), 'DisplayName', ['trial: ' num2str(tr)]);
-xlabel('Dist X');
-ylabel('Dist Y');
-zlabel('Time (s)');
-legend();
-
-saveas(f,[analysis_path '/running_trajectories_' num2str(sid) '_trial_' num2str( tr ) '.fig']);
-saveas(f,[analysis_path '/running_trajectories_' num2str(sid) '_trial_' num2str( tr ) '.png']);
-
+%%%% ATTIC 
 %% 
-figure;
-for f=1:size( EPG_data, 1)
+display_bump_dynamics_turning_ephys( df_f_in_roi_per_trial, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid, pre_stim, stim_dur );
 
-    imagesc(squeeze(mean(squeeze(EPG_data(f,:,:,:)),3)));
-    
-    waitforbuttonpress;
-end
-
-
-%% Plot avg behavior
-ac = get_analysis_constants;
-
-first_stim = 3.0;
-last_stim = 3.5;
-
-f = figure;
-
-avg_yaw = squeeze(mean(squeeze(bdata_vel{ 1 }( :, ac.VEL_YAW, : ))));
-avg_fwd = squeeze(mean(squeeze(bdata_vel{ 1 }( :, ac.VEL_FWD, : ))));
-
-ax_1(1) = subplot(2,1,1); 
-hold on;
-
-p = plot( bdata_vel_time, avg_fwd );
-xlim([0 bdata_vel_time(end)]);
-ylabel('Fwd vel (au/s)');
-axis tight;
-legend(p,['n = (' num2str( size(bdata_vel{1},1) ) ')']);
-
-yy = ylim;
-y_min = yy(1); y_max = yy(2);
-hh = fill([ first_stim first_stim last_stim last_stim ],[y_min y_max y_max y_min ], rgb('Wheat'));
-set(gca,'children',circshift(get(gca,'children'),-1));
-set(hh, 'EdgeColor', 'None');
-
-ax_1(2) = subplot(2,1,2);
-hold on;
-plot( bdata_vel_time, avg_yaw );
-xlim([0 bdata_vel_time(end)]);
-xlabel('Time (s)');
-ylabel('Yaw (au/s)');
-axis tight;
-
-yy = ylim;
-y_min = yy(1); y_max = yy(2);
-hh = fill([ first_stim first_stim last_stim last_stim ],[y_min y_max y_max y_min ], rgb('Wheat'));
-set(gca,'children',circshift(get(gca,'children'),-1));
-set(hh, 'EdgeColor', 'None');
-
-
-linkaxes(ax_1,'x');
-
-
-saveas(f,[analysis_path '/fwd_yaw_tc_sid_' num2str(sid) '.fig']);
-saveas(f,[analysis_path '/fwd_yaw_tc_sid_' num2str(sid) '.png']);
-
-
-
+%% Bump dynamics with yaw and ephys with variable stim
+display_bump_dynamics_turning_ephys_var_stim( df_f_in_roi_per_trial, pico_stim_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid );
 
 
 
