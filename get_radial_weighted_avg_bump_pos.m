@@ -7,7 +7,7 @@ n_frames = size( bump_gloms, 2 );
 
 bump_motion_ids = zeros(1, n_frames);
 
-WEDGE_CNT = 8;
+WEDGE_CNT = n_gloms ;
 wedge_unit_vectors = zeros(WEDGE_CNT, 2);
 starting_angle = 0;
 WEDGE_INCREMENT_IN_DEG = 360.0/WEDGE_CNT;
@@ -27,6 +27,7 @@ for w = 1:WEDGE_CNT
     starting_angle = starting_angle + WEDGE_INCREMENT_IN_DEG;        
 end
 
+figure;
 for ts = 1:n_frames
     
     cur_ts_df_f = squeeze( bump_gloms(:,ts));
@@ -43,7 +44,8 @@ for ts = 1:n_frames
     PVA_ts_y_sum = sum(PVA_ts_y_1,1);
     PVA_ts_y = PVA_ts_y_sum / cur_wedge_df_f_sum;
     
-    theta_deg = wrapTo360( rad2deg(atan2( PVA_ts_y, PVA_ts_x )));
+    % theta_deg = wrapTo360( rad2deg(atan2( PVA_ts_y, PVA_ts_x )));
+    theta_deg = rad2deg(atan2( PVA_ts_y, PVA_ts_x ));
     
     %bump_location = theta_deg / WEDGE_INCREMENT_IN_DEG;
     bump_location = theta_deg;

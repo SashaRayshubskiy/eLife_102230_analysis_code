@@ -3,7 +3,7 @@ function [glom] = get_EB_glomeruli_16_planes( EPG_data, analysis_path )
 % EPG_data = { trials, x, y, planes, time }
 % glom is a cell array of { planes, roi }, there will always be 8 glomeruli
 
-CAXIS_MAX = 1000;
+CAXIS_MAX = 500;
 
 glom_mat_file = [analysis_path '/glomeruli.mat'];
 if( exist(glom_mat_file,'file') > 0 )

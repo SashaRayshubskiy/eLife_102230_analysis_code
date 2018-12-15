@@ -9,15 +9,23 @@ else
     slash = '\';
 end
 
-%trial_exclusion_list = nsyb_83blexA_01_blank_trials;
-trial_exclusion_list = {[],[],[]};
+% Experiment
 
-%datapath = '/data/drive2/sasha/180706_R12D09_P2X2_op6s_60D05_09/';
-%datapath = '/data/drive2/sasha/180707_R12D09_lexA_LexAOp_GFP_01/';
+% sid 0, 1
 % datapath = '/data/drive2/sasha/181022_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15/';
-datapath = '/data/drive2/sasha/181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16/';
 
-%datapath = '/data/drive2/sasha/181019_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_13_first_trials/';
+% sid 0, 2
+% datapath = '/data/drive2/sasha/181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16/'; 
+
+% sid 0
+datapath = '/data/drive2/sasha/181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17/'; 
+
+% sid 1
+% datapath = '/data/drive2/sasha/181211_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18/'; 
+
+% Control
+% sid 0
+% datapath = '/data/drive2/sasha/181206_Lex_6f_60D05_Gal4_P2X2_control_01/';
 
 analysis_path = [datapath slash 'analysis'];
 
@@ -27,7 +35,7 @@ end
 
 sid = [ 0 ];
 
-aconstants = get_analysis_constants;
+aconstants = get_analysis_constants;...
 trial_type_cnt = 1; 
 
 % Load behavioral data
@@ -93,26 +101,63 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% USE FOR 2 CHANNEL DATA: Pre-process time consuming parts of the analysis
-% Drop the first 4 planes
+% Drop the first 4 planes..
 % trials, x, y, color, plane, time
-START_PLANE = 5;
+% START_PLANE = 4; % For 9 planes
+START_PLANE = 5; % For 16 planes
+
 EPG_data_1       = squeeze(cdata_raw{1}( :, :, :, 1, START_PLANE:end, : ));
 % Get max for each plane
 EPG_data = squeeze(max(EPG_data_1, [], 4));
 
+ephys_data_delta_Vm = zeros( size(ephys_data{1}) );
+
+for tr = 1:size(ephys_data{1},1)
+    
+    cur_ephys = ephys_data{1}(tr,:);
+    
+    ephys_data_delta_Vm(tr,:) = cur_ephys - mean(cur_ephys);
+end
 
 %% Display EPG bump, yaw, and ephys on the same plot for quick view of experiment
 [df_f_in_roi_per_trial] = display_EB_dynamics_var_stim( EPG_data_1, pico_stim_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid );
 
-%% Plot avg yaw and ephys, triggered on stim onset
-display_avg_yaw_ephys_triggered_on_stim_onset( EPG_data_1, pico_stim_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid );
+% Plot avg yaw and ephys, triggered on stim onset
+EBYE = EB_yaw_ephys_data; 
 
+% Experiment
+%  stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15_181022.stims_to_include;
+% stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17_181205.stims_to_include;
+% stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16_181203.stims_to_include;
+stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18_181211.stims_to_include;
 
-%% Plot avg yaw and ephys, triggered on bump return onset
+% Control 
+% stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_control_01_181206.stims_to_include;
 
+stim_events = display_avg_yaw_ephys_triggered_on_stim_onset( df_f_in_roi_per_trial, pico_stim_data, ephys_time, ephys_data_delta_Vm, bdata_vel_time, bdata_vel, VPS, analysis_path, sid, stims_to_include );
 
+%% Analyze the data saved for time warping
+warp_EB_data_upsample( stim_events, VPS, analysis_path );
 
+%%
+pad = '/data/drive2/sasha/';
+EBYE = EB_yaw_ephys_data; 
 
+% Path to bump_yaw_ephys_in_window_data_sid_<>.mat file
+% exp_dirs = { {[ pad '181022_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15_181022_sid_0.stims_to_include }, ...
+%              {[ pad '181022_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15/analysis/'], 1, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15_181022_sid_1.stims_to_include }, ...
+%              {[ pad '181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16_181203.stims_to_include }, ...
+%              {[ pad '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17_181205.stims_to_include }, ...
+%              {[ pad '181211_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18/analysis/'], 1, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18_181211.stims_to_include } };
+
+exp_dirs = { {[ pad '181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16_181203.stims_to_include } };
+
+analysis_all_path = [pad '/EB_bump_yaw_ephys_all/'];
+if(~exist(analysis_all_path, 'dir'))
+    mkdir(analysis_all_path);
+end   
+
+analysis_of_bump_speed_vs_yaw( exp_dirs, VPS, analysis_all_path );
 
 %%  Analyze Vm vs. yaw
 FILT_FACTOR = 0.04;
