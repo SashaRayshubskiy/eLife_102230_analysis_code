@@ -19,7 +19,7 @@ if(~exist(analysis_path, 'dir'))
     mkdir(analysis_path);
 end
 
-directories_to_analyze = { { '170816_2xGFP_ss731_75C10_01', [0, 1], 2*11.5*150 } };
+directories_to_analyze = { { '170816_2xGFP_ss731_75C10_01', [0,1], 2*11.5*150 } };
 % directories_to_analyze = { { '180503_2xGFP_ss731_75C10_02', [0], 11.5*126 } };
 % directories_to_analyze = { { '180503_2xGFP_ss731_75C10_03', [0], 11.5*216 } };
 
@@ -27,16 +27,23 @@ directories_to_analyze = { { '170816_2xGFP_ss731_75C10_01', [0, 1], 2*11.5*150 }
 
 idx = 1;
 
+if( strcmp(directories_to_analyze{1}{1}, '180503_2xGFP_ss731_75C10_03') == 1 )
+    % For this dataset A1 and A2 are switched
+    tmpA        = ephys_all_A;
+    ephys_all_A = ephys_all_B;
+    ephys_all_B = tmpA;
+end
+
 %% Show histgram of fwd vel
 figure;
 hist(fwd_all{1}, 1000);
 
-%% Convert physiology to PSTH
-SPIKE_THRESHOLD_LAL_DN = 0.3;
+%% Convert physiology to PSTH and process Vm
+SPIKE_THRESHOLD_LAL_DN = 0.25;
 psth_dt_samples = ephys_SR/ball_SR;
 tic; A2_psth = calculate_psth_A2( t_all{1}, t_vel_all{1}, ephys_all_A{1}, ephys_SR, SPIKE_THRESHOLD_LAL_DN, psth_dt_samples ); toc;
 
-SPIKE_THRESHOLD_LAL_DN = 2.5;
+SPIKE_THRESHOLD_LAL_DN = 2.0;
 tic; A1_psth = calculate_psth_A1( t_all{1}, t_vel_all{1}, ephys_all_B{1}, ephys_SR, SPIKE_THRESHOLD_LAL_DN, psth_dt_samples ); toc;
 
 BIN_SIZE = 0.050; % ms
@@ -48,37 +55,35 @@ yaw_t_down = squeeze(mean(reshape(t_vel_all{1}, [DT_YAW, length(t_vel_all{1})/DT
 A2_psth_down = squeeze(mean(reshape(A2_psth, [DT_YAW, length(A2_psth)/DT_YAW]),1));
 A1_psth_down = squeeze(mean(reshape(A1_psth, [DT_YAW, length(A1_psth)/DT_YAW]),1));
 
-%%
-f = figure;
+% Process Vm
+% Remove spikes first
+FILT_FACTOR = 0.04;
+VmFilt_A2_L_tmp = medfilt1( ephys_all_A{1}, FILT_FACTOR * ephys_SR, 'truncate' );
+VmFilt_A2_R_tmp = medfilt1( ephys_all_B{1}, FILT_FACTOR * ephys_SR, 'truncate' );
 
-BEGIN = 1;
-END = 100000;
+% computer dVm
+TRIAL_CNT_FACTOR = 6; 
+dt = ephys_SR*11.5*TRIAL_CNT_FACTOR;
 
-my_ax(1) = subplot(3,1,1);
-plot(t_vel_all{1}(BEGIN:END)', fwd_all{1}(BEGIN:END)');
+voltage_A_r = reshape(VmFilt_A2_L_tmp, [dt (length(ephys_all_A{1}) / dt)]);
+baseline_avg = squeeze(mean(voltage_A_r));
+voltageA_meansub = voltage_A_r - repmat(baseline_avg, [dt, 1]);
+A2_Vm_b = reshape(voltageA_meansub, [1 length(ephys_all_A{1})]);
 
-my_ax(2) = subplot(3,1,2);
-plot(t_vel_all{1}(BEGIN:END)', yaw_all{1}(BEGIN:END)');
+voltage_B_r = reshape(VmFilt_A2_R_tmp, [dt (length(ephys_all_B{1}) / dt)]);
+baseline_avg = squeeze(mean(voltage_B_r));
+voltageB_meansub = voltage_B_r - repmat(baseline_avg, [dt, 1]);
+A1_Vm_b = reshape(voltageB_meansub, [1 length(ephys_all_B{1})]);       
 
-my_ax(3) = subplot(3,1,3);
-hold on
-plot( t_vel_all{1}(BEGIN:END), A2_psth(BEGIN:END)' );
-plot( t_vel_all{1}(BEGIN:END), A1_psth(BEGIN:END)', 'g' );
-
-linkaxes(my_ax, 'x');
-axis tight;
-
-%xlim([200 220]);
-
-%% Isolate transitions from stationary to moving
-
+% Must get Vm on the same timebase as ball data
 BIN_SIZE = 0.01; % s
 DT_EPHYS = ephys_SR * BIN_SIZE;
-DT_YAW   = ball_SR * BIN_SIZE;
 
-A2_Vm = squeeze(mean(reshape(VmFilt_A2_corr, [ DT_EPHYS, length(VmFilt_A2)/DT_EPHYS ] ),1));
-A1_Vm = squeeze(mean(reshape(VmFilt_A1_corr, [ DT_EPHYS, length(VmFilt_A1)/DT_EPHYS ] ),1));
+A2_Vm = squeeze(mean(reshape( A2_Vm_b, [ DT_EPHYS, length(A2_Vm_b)/DT_EPHYS ] ),1));
+A1_Vm = squeeze(mean(reshape( A1_Vm_b, [ DT_EPHYS, length(A1_Vm_b)/DT_EPHYS ] ),1));
 
+
+%% Isolate transitions from stationary to moving
 
 SAMPLE_CNT = length(A2_psth);
 %SAMPLE_CNT = 10000;
@@ -103,7 +108,7 @@ LOOK_AHEAD = 50;
    
 cur_fwd_std = std(fwd_all{1}(1:1+FWD_LOOK_AHEAD));
 cur_fwd_mean = mean(fwd_all{1}(1:1+FWD_LOOK_AHEAD));
-if(cur_fwd_std < STATIONARY_THRESHOLD)
+if(cur_fwd_std < FROM_MOVING_THRESHOLD)
     cur_state = STATIONARY_STATE;
 else
     cur_state = MOVING_STATE;
@@ -208,7 +213,7 @@ axis tight;
 end
 
 %% Requires previous statement
-f = figure;
+f = figure('units','normalized','outerposition',[0 0 1 1])
 
 event_cnt = size(fwd_stationary_to_moving, 1);
 
@@ -270,17 +275,52 @@ end
 
 subplot(4,1,1);
 hold on;
-plot( t_event, squeeze(mean(left_fwd)), 'color', rgb('Red'));
-plot( t_event, squeeze(mean(right_fwd)), 'color', rgb('Green'));
+
+avg_fwd_left = squeeze(mean(left_fwd));
+sem_fwd_left = get_sem( left_fwd, 1 );
+
+avg_fwd_right = squeeze(mean(right_fwd));
+sem_fwd_right = get_sem( right_fwd, 1 );
+
+fh = fill( [t_event, fliplr(t_event)], ... 
+        [(avg_fwd_left+sem_fwd_left) fliplr((avg_fwd_left-sem_fwd_left))], ...
+        rgb('Salmon'));
+set(fh, 'EdgeColor', 'None');
+
+pl_0 = plot( t_event, avg_fwd_left, 'color', rgb('Red'));
+
+fh = fill( [t_event, fliplr(t_event)], ... 
+        [(avg_fwd_right+sem_fwd_right) fliplr((avg_fwd_right-sem_fwd_right))], ...
+        rgb('PaleGreen'));
+set(fh, 'EdgeColor', 'None');
+
+pl_1 = plot( t_event, avg_fwd_right, 'color', rgb('Green'));
 ylabel('Fwd vel (mm/s)');
 axis tight;
-legend(['Left turn events (' num2str(size(left_fwd,1)) ')'], ['Right turn events (' num2str(size(right_fwd,1)) ')']);
+legend([pl_0, pl_1], ['Left turn events (' num2str(size(left_fwd,1)) ')'], ['Right turn events (' num2str(size(right_fwd,1)) ')'], 'Location', 'northwest');
 
 
 subplot(4,1,2);
 hold on;
-plot( t_event, squeeze(mean(left_yaw)), 'color', rgb('Red'));
-plot( t_event, squeeze(mean(right_yaw)), 'color', rgb('Green'));
+avg_yaw_left = squeeze(mean(left_yaw));
+sem_yaw_left = get_sem( left_yaw, 1 );
+
+avg_yaw_right = squeeze(mean(right_yaw));
+sem_yaw_right = get_sem( right_yaw, 1 );
+
+fh = fill( [t_event, fliplr(t_event)], ... 
+        [(avg_yaw_left+sem_yaw_left) fliplr((avg_yaw_left-sem_yaw_left))], ...
+        rgb('Salmon'));
+set(fh, 'EdgeColor', 'None');
+
+pl_0 = plot( t_event, avg_yaw_left, 'color', rgb('Red'));
+
+fh = fill( [t_event, fliplr(t_event)], ... 
+        [(avg_yaw_right+sem_yaw_right) fliplr((avg_yaw_right-sem_yaw_right))], ...
+        rgb('PaleGreen'));
+set(fh, 'EdgeColor', 'None');
+
+pl_1 = plot( t_event, avg_yaw_right, 'color', rgb('Green'));
 ylabel('Yaw vel (deg/s)');
 axis tight;
 
@@ -288,41 +328,130 @@ SHOW_VM = 1;
 if (SHOW_VM == 1)
 subplot(4,1,3);
 hold on;
-plot( t_event, squeeze(mean(left_A1_Vm)), 'color', rgb('Red'));
-plot( t_event, squeeze(mean(right_A1_Vm)), 'color', rgb('Green'));
-ylabel('A1 Vm (mV)');
-axis tight;
-xlabel('Time (s)');
+
+avg_A1_right = squeeze(mean(right_A1_Vm));
+sem_A1_right = get_sem( right_A1_Vm, 1 );
+
+avg_A2_right = squeeze(mean(right_A2_Vm));
+sem_A2_right = get_sem( right_A2_Vm, 1 );
+
+fh = fill( [t_event, fliplr(t_event)], ... 
+        [(avg_A1_right+sem_A1_right) fliplr((avg_A1_right-sem_A1_right))], ...
+        rgb('Gray'));
+set(fh, 'EdgeColor', 'None');
+
+pl1 = plot( t_event, avg_A1_right, 'color', rgb('Black'));
+
+fh = fill( [t_event, fliplr(t_event)], ... 
+        [(avg_A2_right+sem_A2_right) fliplr((avg_A2_right-sem_A2_right))], ...
+        rgb('Violet'));
+set(fh, 'EdgeColor', 'None');
+
+pl2 = plot( t_event, avg_A2_right, 'color', rgb('Magenta'));
+            
+ylabel('Vm (mV)');
+title( 'Right turning' );
+% axis tight;
+xlim( [t_event(1) t_event(end)] );
 
 subplot(4,1,4);
 hold on;
-plot( t_event, squeeze(mean(left_A2_Vm)), 'color', rgb('Red'));
-plot( t_event, squeeze(mean(right_A2_Vm)), 'color', rgb('Green'));
-ylabel('A2 Vm (mV)');
-axis tight;
-xlabel('Time (s)');
 
-saveas(f, [ analysis_path '/A1_A2_stationary_to_moving_analysis_Vm.fig']);
-saveas(f, [ analysis_path '/A1_A2_stationary_to_moving_analysis_Vm.png']);
+avg_A1_left = squeeze(mean(left_A1_Vm));
+sem_A1_left = get_sem( left_A1_Vm, 1 );
+
+avg_A2_left = squeeze(mean(left_A2_Vm));
+sem_A2_left = get_sem( left_A2_Vm, 1 );
+
+fh = fill( [t_event, fliplr(t_event)], ... 
+        [(avg_A1_left+sem_A1_left) fliplr((avg_A1_left-sem_A1_left))], ...
+        rgb('Gray'));
+set(fh, 'EdgeColor', 'None');
+
+pl1 = plot( t_event, avg_A1_left, 'color', rgb('Black'));
+
+fh = fill( [t_event, fliplr(t_event)], ... 
+        [(avg_A2_left+sem_A2_left) fliplr((avg_A2_left-sem_A2_left))], ...
+        rgb('Violet'));
+set(fh, 'EdgeColor', 'None');
+
+pl2 = plot( t_event, avg_A2_left, 'color', rgb('Magenta'));
+ylabel('Vm (mV)');
+title( 'Left turning' );
+% axis tight;
+xlabel('Time (s)');
+xlim( [t_event(1) t_event(end)] );
+
+legend( [pl1, pl2], ['A1'], ['A2'], 'Location', 'northwest' );
+
+dirpath = directories_to_analyze{1}{1};
+
+saveas(f, [ analysis_path '/' dirpath '_A1_A2_stationary_to_moving_analysis_Vm.fig']);
+saveas(f, [ analysis_path '/' dirpath '_A1_A2_stationary_to_moving_analysis_Vm.png']);
 
 else
 subplot(4,1,3);
 hold on;
-plot( t_event, squeeze(mean(left_A1)), 'color', rgb('Red'));
-plot( t_event, squeeze(mean(right_A1)), 'color', rgb('Green'));
-ylabel('A1 FR (spikes/s)');
-axis tight;
+
+avg_A1_right = squeeze(mean(right_A1));
+sem_A1_right = get_sem( right_A1, 1 );
+
+avg_A2_right = squeeze(mean(right_A2));
+sem_A2_right = get_sem( right_A2, 1 );
+
+fh = fill( [t_event, fliplr(t_event)], ... 
+        [(avg_A1_right+sem_A1_right) fliplr((avg_A1_right-sem_A1_right))], ...
+        rgb('Gray'));
+set(fh, 'EdgeColor', 'None');
+
+pl1 = plot( t_event, avg_A1_right, 'color', rgb('Black'));
+
+fh = fill( [t_event, fliplr(t_event)], ... 
+        [(avg_A2_right+sem_A2_right) fliplr((avg_A2_right-sem_A2_right))], ...
+        rgb('Violet'));
+set(fh, 'EdgeColor', 'None');
+
+pl2 = plot( t_event, avg_A2_right, 'color', rgb('Magenta'));
+
+ylabel('Firing rate (sp/s)');
+title( 'Right turning' );
+% axis tight;
+xlim( [t_event(1) t_event(end)] );
 
 subplot(4,1,4);
 hold on;
-plot( t_event, squeeze(mean(left_A2)), 'color', rgb('Red'));
-plot( t_event, squeeze(mean(right_A2)), 'color', rgb('Green'));
-ylabel('A2 FR (spikes/s)');
-axis tight;
-xlabel('Time (s)');
 
-saveas(f, [ analysis_path '/A1_A2_stationary_to_moving_analysis_FR.fig']);
-saveas(f, [ analysis_path '/A1_A2_stationary_to_moving_analysis_FR.png']);
+avg_A1_left = squeeze(mean(left_A1));
+sem_A1_left = get_sem( left_A1, 1 );
+
+avg_A2_left = squeeze(mean(left_A2));
+sem_A2_left = get_sem( left_A2, 1 );
+
+fh = fill( [t_event, fliplr(t_event)], ... 
+        [(avg_A1_left+sem_A1_left) fliplr((avg_A1_left-sem_A1_left))], ...
+        rgb('Gray'));
+set(fh, 'EdgeColor', 'None');
+
+pl1 = plot( t_event, avg_A1_left, 'color', rgb('Black'));
+
+fh = fill( [t_event, fliplr(t_event)], ... 
+        [(avg_A2_left+sem_A2_left) fliplr((avg_A2_left-sem_A2_left))], ...
+        rgb('Violet'));
+set(fh, 'EdgeColor', 'None');
+
+pl2 = plot( t_event, avg_A2_left, 'color', rgb('Magenta'));
+ylabel('Firing rate (sp/s)');
+title( 'Left turning' );
+% axis tight;
+xlabel('Time (s)');
+xlim( [t_event(1) t_event(end)] );
+
+legend( [pl1, pl2], ['A1'], ['A2'], 'Location', 'northwest' );
+
+dirpath = directories_to_analyze{1}{1};
+
+saveas(f, [ analysis_path '/' dirpath '_A1_A2_stationary_to_moving_analysis_PSTH.fig']);
+saveas(f, [ analysis_path '/' dirpath '_A1_A2_stationary_to_moving_analysis_PSTH.png']);
 end
 
 

@@ -1,4 +1,4 @@
-function [ trial_stim_id_map ] = display_avg_yaw_ephys_triggered_on_stim_onset( df_f_in_roi_per_trial, pico_stim_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid, stims_to_include )
+function [stim_events, trial_stim_id_map] = display_avg_yaw_ephys_triggered_on_stim_onset_left_right_bump( df_f_in_roi_per_trial, pico_stim_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid, stims_to_include )
 
 BEFORE_STIM_TIME = 2.0; % seconds
 AFTER_STIM_TIME  = 10.0; % seconds
@@ -97,60 +97,103 @@ end
 
 left_bump = [];
 left_yaw = [];
-left_bump = [];
+left_ephys = [];
+
+right_bump = [];
+right_yaw = [];
+right_ephys = [];
 
 for i = stim_ids_to_include
     
-    subplot(3,1,1);
-    hold on;
+    %subplot(3,1,1);
+    %hold on;
     
     % [dummy, cur_bump_tc] = max( squeeze(bump_in_window(i,:,:)));      
     cur_bump_tc = get_radial_weighted_avg_bump_pos_v3( squeeze(bump_in_window(i,:,:)) );
     
     % Rotate bump data so that the average pre-stim period is in the same
     % place for each trial.
-    baseline_vals = cur_bump_tc(bump_baseline_idx);
-    baseline_non_nan = baseline_vals(~isnan(baseline_vals));
-    
-    bump_delta_tc = medfilt1( cur_bump_tc - mean(baseline_non_nan), 5, 'truncate' );
+    bump_delta_tc = medfilt1( cur_bump_tc - mean(cur_bump_tc(bump_baseline_idx)), 5, 'truncate' );
 
     bump_tc_all(end+1,:) = bump_delta_tc;    
-    plot(t_bump_w, bump_delta_tc, 'LineWidth', 1 );
+    %plot(t_bump_w, bump_delta_tc, 'LineWidth', 1 );
 
-    subplot(3,1,2);
-    hold on;    
-    plot(t_yaw_w, squeeze(yaw_in_window(i,:)), 'LineWidth', 1 );
-
-    subplot(3,1,3);
-    hold on;    
-    plot(t_ephys_w, squeeze(ephys_in_window(i,:)), 'LineWidth', 1 );
+%     subplot(3,1,2);
+%     hold on;    
+%     plot(t_yaw_w, squeeze(yaw_in_window(i,:)), 'LineWidth', 1 );
+% 
+%     subplot(3,1,3);
+%     hold on;    
+%     plot(t_ephys_w, squeeze(ephys_in_window(i,:)), 'LineWidth', 1 );
+    
+    pre_stim_t = find( (t_bump_w <= 0) & (t_bump_w >= -0.5) );
+    stim_t = find( (t_bump_w >= 0) & (t_bump_w <= 1 ) );
+    
+    if( mean(bump_delta_tc( pre_stim_t )) < mean(bump_delta_tc( stim_t )) )
+        % left trials
+        left_bump(end+1, :) = bump_delta_tc;
+        left_yaw(end+1, :) = yaw_in_window(i,:);
+        left_ephys(end+1, :) = ephys_in_window(i,:);
+    else
+        % right trials
+        right_bump(end+1, :) = bump_delta_tc;
+        right_yaw(end+1, :) = yaw_in_window(i,:);
+        right_ephys(end+1, :) = ephys_in_window(i,:);        
+    end    
 end
 
-ax1(1) = subplot(3,1,1);
+subplot(3,2,1);
 hold on;
-plot( t_bump_w, squeeze(mean(bump_tc_all)), 'LineWidth', 2, 'color', 'b' );
-ylabel('EB bump location');
+for i = 1:size(left_bump,1)
+    plot(t_bump_w, left_bump(i,:), 'LineWidth', 1 );
+end
+plot(t_bump_w, mean(left_bump), 'LineWidth', 2, 'color', 'b' );
 
-ax1(2) = subplot(3,1,2);
+subplot(3,2,3);
 hold on;
-plot( t_yaw_w, squeeze(mean(yaw_in_window(stim_ids_to_include, :))), 'LineWidth', 2, 'color', 'b' );
-ylabel('Yaw (au)');
+for i = 1:size(left_yaw,1)
+    plot(t_yaw_w, left_yaw(i,:), 'LineWidth', 1 );
+end
+plot(t_yaw_w, mean(left_yaw), 'LineWidth', 2, 'color', 'b' );
 
-ax1(3) = subplot(3,1,3);
+subplot(3,2,5);
 hold on;
-plot( t_ephys_w, squeeze(mean(ephys_in_window(stim_ids_to_include,:))), 'LineWidth', 2, 'color', 'b' );
-ylabel('Vm (mV)');
-
-linkaxes(ax1, 'x');
+for i = 1:size(left_ephys,1)
+    plot(t_ephys_w, left_ephys(i,:), 'LineWidth', 1 );
+end
+plot(t_ephys_w, mean(left_ephys), 'LineWidth', 2, 'color', 'b' );
 
 xlabel('Time (s)');
+title(['Number of left bumps: ' num2str(size( left_ephys, 1 ))]);
 
-title(['Number of stim: ' num2str(size(yaw_in_window(stim_ids_to_include,:),1))]);
+subplot(3,2,2);
+hold on;
+for i = 1:size(right_bump,1)
+    plot(t_bump_w, right_bump(i,:), 'LineWidth', 1 );
+end
+plot(t_bump_w, mean(right_bump), 'LineWidth', 2, 'color', 'b' );
 
-saveas( f, [analysis_path '/avg_EB_yaw_ephys_triggered_on_stim_' num2str(sid) '.fig'] );
-saveas( f, [analysis_path '/avg_EB_yaw_ephys_triggered_on_stim_' num2str(sid) '.png'] );
+subplot(3,2,4);
+hold on;
+for i = 1:size(right_yaw,1)
+    plot(t_yaw_w, right_yaw(i,:), 'LineWidth', 1 );
+end
+plot(t_yaw_w, mean(right_yaw), 'LineWidth', 2, 'color', 'b' );
 
-if 1
+subplot(3,2,6);
+hold on;
+for i = 1:size( right_ephys, 1 )
+    plot(t_ephys_w, right_ephys(i,:), 'LineWidth', 1 );
+end
+plot(t_ephys_w, mean(right_ephys), 'LineWidth', 2, 'color', 'b' );
+
+xlabel('Time (s)');
+title(['Number of right bumps: ' num2str(size( right_ephys, 1 ))]);
+
+saveas( f, [analysis_path '/avg_EB_yaw_ephys_triggered_on_left_right_stim_' num2str(sid) '.fig'] );
+saveas( f, [analysis_path '/avg_EB_yaw_ephys_triggered_on_left_right_stim_' num2str(sid) '.png'] );
+
+if 0
     % Display all individual stim events
     for i = 1:size( yaw_in_window, 1 )
 %    for i = 1
@@ -185,7 +228,6 @@ if 1
     end   
 end
 
-if 0
 % Save a matrix of EB bump location, yaw and ephys for piecewise time warping
 if( isempty(stims_to_include) == 0 )
     
@@ -240,7 +282,6 @@ else
     stim_events.EB = {};
     stim_events.yaw = {};
     stim_events.ephys = {};
-end
 end
 end
 

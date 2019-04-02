@@ -11,7 +11,7 @@ end
 
 % Experiment
 
-% sid 0, 1
+% sid 0, 1 -- very low number of trials, no clear bump returns
 % datapath = '/data/drive2/sasha/181022_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15/';
 
 % sid 0, 2
@@ -23,9 +23,35 @@ datapath = '/data/drive2/sasha/181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17/';
 % sid 1
 % datapath = '/data/drive2/sasha/181211_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18/'; 
 
-% Control
 % sid 0
-% datapath = '/data/drive2/sasha/181206_Lex_6f_60D05_Gal4_P2X2_control_01/';
+% datapath = '/data/drive2/sasha/190131_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19/'; 
+
+% sid 0
+% datapath = '/data/drive2/sasha/190204_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22/'; 
+
+% sid 1 
+% datapath = '/data/drive2/sasha/190205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23/'; 
+
+
+% Control
+
+% sid 0
+datapath = '/data/drive2/sasha/181206_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_01/';
+
+% sid 0
+% datapath = '/data/drive2/sasha/190208_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_02/';
+
+% sid 1
+% datapath = '/data/drive2/sasha/190211_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_03/';
+
+% sid 0
+% datapath = '/data/drive2/sasha/190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04/';
+
+% sid 0 -- poor bump data
+% datapath = '/data/drive2/sasha/190213_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_05/';
+
+% sid 1 -- bad recording
+% datapath =  '/data/drive2/sasha/181211_Lex_6f_60D05_Gal4_P2X2_control_02';
 
 analysis_path = [datapath slash 'analysis'];
 
@@ -35,7 +61,7 @@ end
 
 sid = [ 0 ];
 
-aconstants = get_analysis_constants;...
+aconstants = get_analysis_constants;
 trial_type_cnt = 1; 
 
 % Load behavioral data
@@ -122,42 +148,200 @@ end
 %% Display EPG bump, yaw, and ephys on the same plot for quick view of experiment
 [df_f_in_roi_per_trial] = display_EB_dynamics_var_stim( EPG_data_1, pico_stim_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid );
 
-% Plot avg yaw and ephys, triggered on stim onset
+%% Plot avg yaw and ephys, triggered on stim onset
 EBYE = EB_yaw_ephys_data; 
 
 % Experiment
-%  stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15_181022.stims_to_include;
-% stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17_181205.stims_to_include;
+% stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15_181022_sid_1.stims_to_include;
+
 % stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16_181203.stims_to_include;
-stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18_181211.stims_to_include;
+% stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17_181205.stims_to_include;
+% stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18_181211.stims_to_include;
+
+stims_to_include = [];
 
 % Control 
 % stims_to_include = EBYE.Lex_6f_60D05_Gal4_P2X2_control_01_181206.stims_to_include;
 
-stim_events = display_avg_yaw_ephys_triggered_on_stim_onset( df_f_in_roi_per_trial, pico_stim_data, ephys_time, ephys_data_delta_Vm, bdata_vel_time, bdata_vel, VPS, analysis_path, sid, stims_to_include );
+[ trial_stim_id_map ] = display_avg_yaw_ephys_triggered_on_stim_onset( df_f_in_roi_per_trial, pico_stim_data, ephys_time, ephys_data_delta_Vm, bdata_vel_time, bdata_vel, VPS, analysis_path, sid, stims_to_include );
+%[stim_events, trial_stim_id_map] = display_avg_yaw_ephys_triggered_on_stim_onset_left_right_bump( df_f_in_roi_per_trial, pico_stim_data, ephys_time, ephys_data_delta_Vm, bdata_vel_time, bdata_vel, VPS, analysis_path, sid, stims_to_include );
 
-%% Analyze the data saved for time warping
-warp_EB_data_upsample( stim_events, VPS, analysis_path );
 
-%%
+
+%% Show bump analysis 
 pad = '/data/drive2/sasha/';
 EBYE = EB_yaw_ephys_data; 
 
 % Path to bump_yaw_ephys_in_window_data_sid_<>.mat file
-% exp_dirs = { {[ pad '181022_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15_181022_sid_0.stims_to_include }, ...
+% exp_dirs = { {[ pad '181022_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15_181022_sid_1.stims_to_include } };
 %              {[ pad '181022_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15/analysis/'], 1, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15_181022_sid_1.stims_to_include }, ...
 %              {[ pad '181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16_181203.stims_to_include }, ...
 %              {[ pad '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17_181205.stims_to_include }, ...
 %              {[ pad '181211_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18/analysis/'], 1, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18_181211.stims_to_include } };
 
-exp_dirs = { {[ pad '181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16_181203.stims_to_include } };
+% exp_dirs = { {[ pad '181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16_181203.stims_to_include } };
+% exp_dirs = { {[ pad '181022_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15_181022.stims_to_include } };
+% exp_dirs = { {[ pad '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17_181205.stims_to_include } };
+% exp_dirs = { {[ pad '181211_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18/analysis/'], 1, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18_181211.stims_to_include } };
+% exp_dirs = { {[ pad '190131_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19_190131.stims_to_include } };
 
-analysis_all_path = [pad '/EB_bump_yaw_ephys_all/'];
-if(~exist(analysis_all_path, 'dir'))
-    mkdir(analysis_all_path);
-end   
+% exp_dirs = { {[ pad '190204_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22_190204.stims_to_include } };
+exp_dirs = { {[ pad '190205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23/analysis/'], 1, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23_190205.stims_to_include } };
 
-analysis_of_bump_speed_vs_yaw( exp_dirs, VPS, analysis_all_path );
+% analysis_all_path = [pad '/EB_bump_yaw_ephys_all/'];
+% if(~exist(analysis_all_path, 'dir'))
+%     mkdir(analysis_all_path);
+% end   
+
+%% Run this to obtain bump velocity plots, used for bump return alignment
+analysis_of_bump_speed_vs_yaw_v4( exp_dirs, VPS, analysis_path );
+
+
+%% Show bump return analysis
+clear EBYE;
+EBYE = EB_yaw_ephys_data; 
+% cur_bump_return = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16_181203_cbr_down;
+% cur_bump_return = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17_181205_cbr_down;
+% cur_bump_return = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18_181211_cbr_down;
+
+% cur_bump_return = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19_190131_cbr_up; direction_of_return = 'up';
+% cur_bump_return = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19_190131_cbr_down; direction_of_return = 'down';
+
+% cur_bump_return = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22_190204_cbr_up; direction_of_return = 'up';
+% cur_bump_return = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22_190204_cbr_down; direction_of_return = 'down';
+
+% cur_bump_return = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23_190205_cbr_up; direction_of_return = 'up';
+cur_bump_return = EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23_190205_cbr_down; direction_of_return = 'down';
+
+analysis_of_bump_return( exp_dirs, cur_bump_return, VPS, analysis_path, direction_of_return );
+
+%% Analysis of bump return for all flies
+pad = '/data/drive2/sasha/';
+EBYE = EB_yaw_ephys_data; 
+
+VPS = 12.4;
+
+direction_of_return = 'down';
+cur_all_fly_dirs_bump_down = { {[ pad '181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16_181203.stims_to_include, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16_181203_cbr_down }, ...
+                           {[ pad '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17_181205.stims_to_include, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17_181205_cbr_down }, ...
+                           {[ pad '181211_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18/analysis/'], 1, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18_181211.stims_to_include, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18_181211_cbr_down }, ...
+                           {[ pad '190131_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19_190131.stims_to_include, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19_190131_cbr_down }, ...
+                           {[ pad '190204_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22_190204.stims_to_include, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22_190204_cbr_down }, ...
+                           {[ pad '190205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23/analysis/'], 1, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23_190205.stims_to_include, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23_190205_cbr_down } };
+
+[t_win_down, cx_vars_down] = analysis_of_bump_return_v2( cur_all_fly_dirs_bump_down, VPS, direction_of_return );
+
+direction_of_return = 'up';
+cur_all_fly_dirs_bump_up = { {[ pad '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17_181205.stims_to_include, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17_181205_cbr_up }, ...
+                             {[ pad '190131_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19_190131.stims_to_include, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19_190131_cbr_up }, ...
+                             {[ pad '190204_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22/analysis/'], 0, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22_190204.stims_to_include, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22_190204_cbr_up }, ...
+                             {[ pad '190205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23/analysis/'], 1, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23_190205.stims_to_include, EBYE.Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23_190205_cbr_up } };
+
+[t_win_up, cx_vars_up] = analysis_of_bump_return_v2( cur_all_fly_dirs_bump_up, VPS, direction_of_return );
+
+
+%% Plots both up and down CX vars
+cx_file_path = [pad 'CX_summary/'];
+
+f = figure;
+
+down_clr_avg = rgb('SeaGreen');
+up_clr_avg = rgb('DarkMagenta');
+
+ax1(1) = subplot(3,1,1);
+hold on;
+avg_bump_down = mean(cx_vars_down{1});
+sem_bump_down = get_sem(cx_vars_down{1}, 1);
+
+avg_bump_up = mean(cx_vars_up{1});
+sem_bump_up = get_sem(cx_vars_up{1},1);
+
+fh = fill( [t_win_down{1}, fliplr(t_win_down{1})], ...
+    [(avg_bump_down-sem_bump_down) fliplr((avg_bump_down+sem_bump_down))], ...
+    rgb('PaleGreen'));
+set(fh, 'EdgeColor', 'None');
+
+fh = fill( [t_win_up{1}, fliplr(t_win_up{1})], ...
+    [(avg_bump_up-sem_bump_up) fliplr((avg_bump_up+sem_bump_up))], ...
+    rgb('Violet'));
+set(fh, 'EdgeColor', 'None');
+
+plot( t_win_down{1}, avg_bump_down, 'color', down_clr_avg, 'LineWidth', 2 );
+plot( t_win_up{1}, avg_bump_up, 'color', up_clr_avg, 'LineWidth', 2 );
+
+ylabel('EB vel(au/s)');
+
+ax1(2) = subplot(3,1,2);
+hold on;
+avg_yaw_down = mean(cx_vars_down{2});
+sem_yaw_down = get_sem(cx_vars_down{2}, 1);
+
+avg_yaw_up = mean(cx_vars_up{2});
+sem_yaw_up = get_sem(cx_vars_up{2},1);
+
+fh = fill( [t_win_down{2}, fliplr(t_win_down{2})], ...
+    [(avg_yaw_down-sem_yaw_down) fliplr((avg_yaw_down+sem_yaw_down))], ...
+    rgb('PaleGreen'));
+set(fh, 'EdgeColor', 'None');
+
+fh = fill( [t_win_up{2}, fliplr(t_win_up{2})], ...
+    [(avg_yaw_up-sem_yaw_up) fliplr((avg_yaw_up+sem_yaw_up))], ...
+    rgb('Violet'));
+set(fh, 'EdgeColor', 'None');
+
+plot( t_win_down{2}, avg_yaw_down, 'color', down_clr_avg, 'LineWidth', 2 );
+plot( t_win_up{2}, avg_yaw_up, 'color', up_clr_avg, 'LineWidth', 2 );
+
+ylabel('Yaw vel (au/s)');
+
+ax1(3) = subplot(3,1,3);
+hold on;
+avg_ephys_down = mean(cx_vars_down{3});
+sem_ephys_down = get_sem(cx_vars_down{3}, 1);
+
+avg_ephys_up = mean(cx_vars_up{3});
+sem_ephys_up = get_sem(cx_vars_down{3},1);
+
+fh = fill( [t_win_down{3}, fliplr(t_win_down{3})], ...
+    [(avg_ephys_down-sem_ephys_down) fliplr((avg_ephys_down+sem_ephys_down))], ...
+    rgb('PaleGreen'));
+set(fh, 'EdgeColor', 'None');
+
+fh = fill( [t_win_up{3}, fliplr(t_win_up{3})], ...
+    [(avg_ephys_up-sem_ephys_up) fliplr((avg_ephys_up+sem_ephys_up))], ...
+    rgb('Violet'));
+set(fh, 'EdgeColor', 'None');
+
+plot( t_win_down{3}, avg_ephys_down, 'color', down_clr_avg, 'LineWidth', 2 );
+plot( t_win_up{3}, avg_ephys_up, 'color', up_clr_avg, 'LineWidth', 2 );
+
+ylabel('Vm (mV)');
+xlabel('Time (s)');
+
+linkaxes(ax1, 'x');
+saveas(f, [ cx_file_path 'bump_return_yaw_ephys_all_flies.fig' ]);
+saveas(f, [ cx_file_path 'bump_return_yaw_ephys_all_flies.png' ]);
+
+%%
+
+trial_stim_id_map = [];
+show_running_trajectories_for_good_bump_jumps(  sid, bdata_vel_time, bdata_vel, trial_stim_id_map, pico_stim_data, analysis_path );
+
+%% Exploring large right turns
+
+f = figure;
+tr = 11;
+disp_x = squeeze(traj{1}(tr,1,:));
+disp_y = squeeze(traj{1}(tr,2,:));
+plot3( disp_x, disp_y, bdata_vel_time, 'color', cm(tr,:), 'DisplayName', ['trial: ' num2str(tr)]);
+xlabel('Dist X');
+ylabel('Dist Y');
+zlabel('Time (s)');
+legend();
+
+saveas(f,[analysis_path '/running_trajectories_' num2str(sid) '_trial_' num2str( tr ) '.fig']);
+saveas(f,[analysis_path '/running_trajectories_' num2str(sid) '_trial_' num2str( tr ) '.png']);
+
 
 %%  Analyze Vm vs. yaw
 FILT_FACTOR = 0.04;
@@ -241,6 +425,7 @@ display_bump_dynamics_turning_ephys( df_f_in_roi_per_trial, ephys_time, ephys_da
 display_bump_dynamics_turning_ephys_var_stim( df_f_in_roi_per_trial, pico_stim_data, ephys_time, ephys_data, bdata_vel_time, bdata_vel, VPS, analysis_path, sid );
 
 
-
+%% Analyze the data saved for time warping
+warp_EB_data_upsample( stim_events, VPS, analysis_path );
 
 

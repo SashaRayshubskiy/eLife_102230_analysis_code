@@ -1,4 +1,4 @@
-function analysis_of_bump_speed_vs_yaw( exp_dirs, VPS, analysis_path )
+function analysis_of_bump_return( exp_dirs, bump_return_times, VPS, analysis_path, direction_of_return )
 
 % exp_dirs = { {[ pad '181022_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15/analysis/'], 0 }, ...
 %              {[ pad '181022_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_15/analysis/'], 1 }, ...
@@ -29,28 +29,36 @@ for d = 1:length(exp_dirs)
     
     assert( length(cur_stims_to_include) > 0 );
     
-    % f = figure;
+    f = figure;
     
     bump_to_avg = {};
     yaw_to_avg = {};
     ephys_to_avg = {};
     
-    % Good bump activity
-    % good_bump_16 = [ 1 3 4 5 6 8 9 10 11 12 13 14 15 16 18 20 21 24 25 26 ];
+    %for s = 1:length( cur_stims_to_include )
+    j = 1;
+    bump_win  = [];
+    ephys_win = [];
+    yaw_win   = [];
     
-    for s = 1:length( cur_stims_to_include )
-    %for s = good_bump_16
+    stim_ids = int32(squeeze(bump_return_times(:,1)));
+    
+   while( j <= length(stim_ids) )
         
+        s = stim_ids(j);
         cur_stim_id = cur_stims_to_include( s, 1 );
-        %cur_start_t = cur_stims_to_include( s, 2 )+2.0; % Roughly around the time of the bump turn after start
-        cur_start_t = cur_stims_to_include( s, 2 );   
+        % cur_start_t = cur_stims_to_include( s, 2 ) + 2.0; % Roughly around the time of the bump turn after start
+        cur_start_t = cur_stims_to_include( s, 2 ); 
         cur_end_t   = cur_stims_to_include( s, 3 );
+        
+        EB_bump_vel_align = bump_return_times( j, 2 ) + cur_start_t;
+        j = j + 1;
         
         disp([ 'About to process stim: ' num2str(s) ]);
 
         cur_bump_rois = squeeze(cur_bump_in_window(cur_stim_id,:,:));
         
-        cur_EB_bump = ( cur_bump_rois );  
+        cur_EB_bump = get_radial_weighted_avg_bump_pos_v3( cur_bump_rois );  
         if( length(cur_EB_bump) == 0 )
             % Skip this stim, because there was impossible to get a clean
             % bump trajectory, probably due to sporadic bump disappearance 
@@ -67,9 +75,12 @@ for d = 1:length(exp_dirs)
         yaw_interval = find( (t_yaw_w >= cur_start_t) & (t_yaw_w <= cur_end_t));
         ephys_interval = find( (t_ephys_w >= cur_start_t) & (t_ephys_w <= cur_end_t));
         
-        cur_EB_bump_in_interval = cur_EB_bump( EB_interval );
+        % cur_EB_bump_in_interval = cur_EB_bump( EB_interval );        
+        cur_EB_bump_in_interval = cur_EB_bump;
+       
+        %cur_yaw_in_interval     = cur_yaw( yaw_interval );
+        cur_yaw_in_interval     = cur_yaw;
         
-        cur_yaw_in_interval     = cur_yaw( yaw_interval );
         % downsample yaw to be in the same time base as EB
         dT = floor(ball_FR / VPS);
 
@@ -78,19 +89,88 @@ for d = 1:length(exp_dirs)
         
         cur_yaw_in_interval_down = mean(reshape( cur_yaw_in_interval(1:dT_len), [dT, min_len ]));
         
-        cur_ephys_in_interval   = cur_ephys( ephys_interval );
+        %cur_ephys_in_interval   = cur_ephys( ephys_interval );
+        cur_ephys_in_interval   = cur_ephys;
       
         bump_to_avg{end+1}  = cur_EB_bump_in_interval; 
         yaw_to_avg{end+1}   = cur_yaw_in_interval;
         ephys_to_avg{end+1} = cur_ephys_in_interval; 
         
         EB_bump_pos_filt = medfilt1( cur_EB_bump_in_interval, 10, 'truncate' );
-        
+                
         dt = 1 / VPS;
         EB_vel = diff(EB_bump_pos_filt) / dt;  
         % EB_vel_filt = medfilt1( EB_vel, 10, 'truncate' );
                       
-        if 1
+        % Align by the EB vel
+        xx = find( t_bump_w < EB_bump_vel_align );
+        EB_bump_vel_align_idx = xx(end);
+        
+        TIME_BEFORE_EB_VEL_CHANGE = 1.0;
+        TIME_AFTER_EB_VEL_CHANGE = 2.0;
+        
+        EB_FRAMES_BEFORE_EB_VEL_CHANGE = floor( TIME_BEFORE_EB_VEL_CHANGE * VPS );
+        EB_FRAMES_AFTER_EB_VEL_CHANGE  = floor( TIME_AFTER_EB_VEL_CHANGE * VPS );        
+        cur_EB_bump_vel_win_start  = EB_bump_vel_align_idx - EB_FRAMES_BEFORE_EB_VEL_CHANGE; 
+        cur_EB_bump_vel_win_end  = EB_bump_vel_align_idx + EB_FRAMES_AFTER_EB_VEL_CHANGE; 
+        
+        if( ( cur_EB_bump_vel_win_start < 1) || ( cur_EB_bump_vel_win_end > length(EB_vel) ) )
+            continue;
+        end
+        
+        cur_EB_vel_win = EB_vel( cur_EB_bump_vel_win_start:cur_EB_bump_vel_win_end );
+        bump_win(end+1,:) = cur_EB_vel_win;
+        t_bump_win = t_bump_w( cur_EB_bump_vel_win_start:cur_EB_bump_vel_win_end ) - t_bump_w(EB_bump_vel_align_idx);
+        
+        % Yaw 
+        % t_yaw_interval = t_yaw_w(yaw_interval);        
+        xx = find( t_yaw_w < EB_bump_vel_align );
+        yaw_align_idx = xx(end);
+               
+        YAW_FRAMES_BEFORE_EB_VEL_CHANGE = floor( TIME_BEFORE_EB_VEL_CHANGE * ball_FR );
+        YAW_FRAMES_AFTER_EB_VEL_CHANGE  = floor( TIME_AFTER_EB_VEL_CHANGE * ball_FR );        
+        cur_yaw_win_start  = yaw_align_idx - YAW_FRAMES_BEFORE_EB_VEL_CHANGE; 
+        cur_yaw_win_end  = yaw_align_idx + YAW_FRAMES_AFTER_EB_VEL_CHANGE; 
+        
+        cur_yaw_win = cur_yaw_in_interval( cur_yaw_win_start:cur_yaw_win_end );
+        yaw_win(end+1,:) = cur_yaw_win;
+        t_yaw_win = t_yaw_w( cur_yaw_win_start:cur_yaw_win_end ) - t_yaw_w(yaw_align_idx);
+
+        % Ephys
+        % t_ephys_interval = t_ephys_w(ephys_interval);        
+        xx = find( t_ephys_w < EB_bump_vel_align );
+        ephys_align_idx = xx(end);
+               
+        EPHYS_FRAMES_BEFORE_EB_VEL_CHANGE = floor( TIME_BEFORE_EB_VEL_CHANGE * ephys_FR );
+        EPHYS_FRAMES_AFTER_EB_VEL_CHANGE  = floor( TIME_AFTER_EB_VEL_CHANGE * ephys_FR );        
+        cur_ephys_win_start  = ephys_align_idx - EPHYS_FRAMES_BEFORE_EB_VEL_CHANGE; 
+        cur_ephys_win_end  = ephys_align_idx + EPHYS_FRAMES_AFTER_EB_VEL_CHANGE; 
+        
+        cur_ephys_win = cur_ephys_in_interval( cur_ephys_win_start:cur_ephys_win_end );
+        ephys_win(end+1,:) = cur_ephys_win;
+        t_ephys_win = t_ephys_w( cur_ephys_win_start:cur_ephys_win_end ) - t_ephys_w(ephys_align_idx);
+        
+        if 0
+            subplot(3,1,1);
+            hold on;
+            plot( t_bump_win, cur_EB_vel_win );
+            ylabel('EB vel');
+            axis tight;
+            
+            subplot(3,1,2);
+            hold on;
+            plot( t_yaw_win, cur_yaw_win );
+            ylabel('Yaw (au/s)');
+            axis tight;
+            
+            subplot(3,1,3);
+            hold on;
+            plot( t_ephys_win, cur_ephys_win );
+            ylabel('Vm (mV)');
+            axis tight;
+        end
+        
+        if 0
             f = figure;
             subplot(2,1,1);
             hold on;
@@ -111,10 +191,10 @@ for d = 1:length(exp_dirs)
             
             saveas(f, [analysis_path '/EB_bump_location_and_velocity_stimID_' num2str( s ) '.fig']);
             saveas(f, [analysis_path '/EB_bump_location_and_velocity_stimID_' num2str( s ) '.png']);
-            % close(f);
-            waitforbuttonpress;            
-            subplot(2,1,1); cla();
-            subplot(2,1,2); cla();
+            close(f);
+            %waitforbuttonpress;            
+            %subplot(2,1,1); cla();
+            %subplot(2,1,2); cla();
         end
         
         if 0
@@ -126,15 +206,33 @@ for d = 1:length(exp_dirs)
             ylabel('Yaw velocity');
         end
         
-        if 0
+        if 1
+            subplot(2,1,1);
             yyaxis left;
-            plot( t_bump_w(EB_interval(1:end-1)), EB_vel_filt );
+            hold on;
+            plot( t_bump_win, cur_EB_vel_win, '-' );
+            ylim([-15 15]);
             ylabel('EB Vel (au/s)');
             
             yyaxis right;
-            plot( t_yaw_w(yaw_interval), cur_yaw_in_interval );
+            hold on;
+            plot( t_yaw_win, cur_yaw_win, '-' );
             ylabel('Yaw (au/s)');
-            waitforbuttonpress;
+            xlabel('Time (s)');
+
+            subplot(2,1,2);
+            yyaxis left;
+            hold on;
+            plot( t_bump_win, cur_EB_vel_win, '-' );
+            ylim([-15 15]);
+            ylabel('EB Vel (au/s)');
+            
+            yyaxis right;
+            hold on;
+            plot( t_ephys_win, cur_ephys_win, '-' );
+            ylabel('Vm (mV)');
+            xlabel('Time (s)');
+            % waitforbuttonpress;
         end
         
         if 0
@@ -160,6 +258,56 @@ for d = 1:length(exp_dirs)
             plot( cur_yaw_in_interval );
             ylabel('Yaw (au/s)');
         end
+   end
+       
+   subplot(2,1,1);
+   yyaxis left;
+   hold on;
+   plot( t_bump_win, mean(bump_win), '-', 'LineWidth', 3.0 );
+   ylim([-15 15]);
+   ylabel('EB Vel (au/s)');
+   
+   yyaxis right;
+   hold on;
+   plot( t_yaw_win, mean(yaw_win), '-', 'LineWidth', 3.0, 'color', rgb('Red') );
+   ylabel('Yaw (au/s)');
+   xlabel('Time (s)');
+   
+   axis tight;
+   
+   subplot(2,1,2);
+   yyaxis left;
+   hold on;
+   plot( t_bump_win, mean(bump_win), '-', 'LineWidth', 3.0 );
+   ylim([-15 15]);
+   ylabel('EB Vel (au/s)');
+   
+   yyaxis right;
+   hold on;
+   plot( t_ephys_win, mean(ephys_win), '-', 'LineWidth', 3.0, 'color', rgb('Red') );
+   ylabel('Vm (mV)');
+   xlabel('Time (s)');
+   axis tight;
+   
+   saveas( f, [analysis_path '/bump_return_vs_yaw_vs_ephys_' direction_of_return '.fig'] ); 
+   saveas( f, [analysis_path '/bump_return_vs_yaw_vs_ephys_' direction_of_return '.png'] ); 
+   
+    if 0
+        subplot(3,1,1);
+        hold on;        
+        plot( t_bump_win, mean(bump_win), 'LineWidth', 3.0 );
+        ylabel('EB vel');
+        ylim([ -10 10 ]);
+        
+        subplot(3,1,2);
+        hold on;
+        plot( t_yaw_win, mean(abs(yaw_win)), 'LineWidth', 3.0 );
+        ylabel('Yaw (au/s)');
+        
+        subplot(3,1,3);
+        hold on;
+        plot( t_ephys_win, mean(ephys_win), 'LineWidth', 3.0 );
+        ylabel('Vm (mV)');
     end
     
     if 0
