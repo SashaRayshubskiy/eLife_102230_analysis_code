@@ -12,9 +12,10 @@ for g = 1:size(F_per_trial,2)
 
     % Use the bottom 5% as baseline
     cur_glom_sorted = sort( cur_glom(:) );
-    %five_percent_index = ceil( length(cur_glom(:)) * 0.05 );
-    five_percent_index = ceil( length(cur_glom(:)) * 0.5 );
-    cur_baseline = mean(cur_glom_sorted( 1:five_percent_index ));
+    %percent_index = ceil( length(cur_glom(:)) * 0.05 );
+    percent_index = ceil( length(cur_glom(:)) * 0.5 );
+    % percent_index = ceil( length(cur_glom(:)) * 0.25 );
+    cur_baseline = mean(cur_glom_sorted( 1:percent_index ));
 
     % cur_baseline = mean(cur_glom(:));
         

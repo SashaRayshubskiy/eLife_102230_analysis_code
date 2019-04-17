@@ -3,6 +3,7 @@ function [ bump_motion_ids ] = assess_and_fix_bump_quality( cur_bump_in, VPS )
 % If there are sufficient consecutive gaps in bump quality then disqualify this trial,
 % Otherwise, fill in the gaps.
 
+% TIME_GAP_WITH_NO_BUMP    = 1.0;
 TIME_GAP_WITH_NO_BUMP    = 1.0;
 SAMPLES_GAP_WITH_NO_BUMP = floor( TIME_GAP_WITH_NO_BUMP * VPS );
 

@@ -21,12 +21,17 @@ clear all;
 % sid 0
 % datapath = '/data/drive2/sasha/190204_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22/'; 
 
+% No bump return up trials
+%                     { '181211_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18', 1 }, ...
+
+
+% { path to data, sid, A2 FR threshold, JUMP_THRESHOLD, BUMP_RETURN_STABILITY_WINDOW, BUMP_SPEED_THRESHOLD }
 basedir = '/data/drive2/sasha/';
-exp_directories = { { '181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16', 0 }, ...
-                    { '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17', 0 }, ...
-                    { '181211_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18', 1 }, ...
-                    { '190131_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19', 0 }, ...
-                    { '190204_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22', 0 } };                           
+exp_directories = { { '181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16', 0, 0.4, 0.5, 0.5, 0.5 }, ...
+                    { '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17', 0, 0.2, 0.5, 0.5, 0.5 }, ...
+                    { '190131_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19', 0, 0.3, 0.5, 0.5, 0.5 }, ...
+                    { '190204_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22', 0, 0.4, 0.5, 0.5, 0.5 }, ...
+                    { '190205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23', 1, 0.3, 0.25, 2.5, 0.1 } };                           
                              
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Control
@@ -44,10 +49,10 @@ exp_directories = { { '181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16', 0 }, ...
 % sid 0
 % datapath = '/data/drive2/sasha/190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04/';
 
-ctrl_directories = { { '181206_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_01', 0 }, ... 
-                     { '190208_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_02', 0 }, ... 
-                     { '190211_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_03', 1 }, ... 
-                     { '190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04', 0 } };
+ctrl_directories = { { '181206_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_01', 0, 0.4 }, ... 
+                     { '190208_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_02', 0, 0.4 }, ... 
+                     { '190211_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_03', 1, 0.4 }, ... 
+                     { '190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04', 0, 0.4 } };
 
 %%
 extract_key_variables( basedir, exp_directories );                 
@@ -67,29 +72,28 @@ extract_stim_windows( basedir, ctrl_directories );
 %% Experiment: Filter stims for clear bump returns for exp, calculate peak bump velocity
 % and align it to ball and ephys 
 
-
-% [ bump_jumps_up_returns_down, bump_jumps_down_returns_up, no_response ] = filter_bump_returns_experiment( basedir, test_dir );
-
 RUN_EXPERIMENT = 55;
 RUN_CONTROL    = 56;
 RUN_TEST       = 57;
 
 % ANALYSIS_TYPE = RUN_EXPERIMENT; experiment_type_str = 'experiment';
-ANALYSIS_TYPE = RUN_CONTROL; experiment_type_str = 'control';
-% ANALYSIS_TYPE = RUN_TEST; experiment_type_str = 'test';
+% ANALYSIS_TYPE = RUN_CONTROL; experiment_type_str = 'control';
+ANALYSIS_TYPE = RUN_TEST; experiment_type_str = 'test';
 
 if( ANALYSIS_TYPE == RUN_EXPERIMENT )
     cur_dirs = exp_directories;
 elseif( ANALYSIS_TYPE == RUN_CONTROL )
     cur_dirs = ctrl_directories;
 elseif( ANALYSIS_TYPE == RUN_TEST )
-    % cur_dirs = { { '181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16', 0 } }; 
-    cur_dirs = { { '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17', 0 } }; 
+    % cur_dirs = { { '181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16', 0, 0.4 } }; 
+    cur_dirs = { { '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17', 0, 0.2, 0.5, 0.5, 0.5} }; 
+    % cur_dirs = { { '181211_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18', 1, 0.4 } }; 
+    % cur_dirs = { { '190131_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19', 0, 0.3 } }; 
+    % cur_dirs = { { '190205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23', 1, 0.3 } };
 end
 
-[ bump_jumps_up_returns_down, bump_jumps_down_returns_up, no_response ] = filter_bump_returns_experiment_v2( basedir, cur_dirs );
-
-%% 
+%%
+[ bump_jumps_up_returns_down, bump_jumps_down_returns_up, no_response ] = filter_bump_returns_experiment_v3( basedir, cur_dirs );
 % bump_conditions = { bump_jumps_up_returns_down, bump_jumps_down_returns_up, no_response };
 % bump_conditions_str = { 'bump_jumps_up_returns_down', 'bum....p_jumps_down_returns_up', 'no_response' };
 %bump_conditions = { bump_jumps_down_returns_up, no_response };
@@ -97,10 +101,32 @@ end
 bump_conditions = { bump_jumps_down_returns_up, bump_jumps_up_returns_down };
 bump_conditions_str = { 'bump_jumps_down_returns_up', 'bump_jumps_up_returns_down' };
 
-[ bump_win_all, yaw_win_all, fwd_win_all, ephys_win_all, timebase_bump, timebase_yaw, timebase_ephys  ] = align_by_bump_velocity( basedir, cur_dirs, bump_conditions, bump_conditions_str );
+[ bump_win_all, yaw_win_all, fwd_win_all, ephys_win_all, timebase_bump, timebase_yaw, timebase_ephys  ] = align_by_bump_velocity_v2( basedir, cur_dirs, bump_conditions, bump_conditions_str );
+
+%% Classify by bump returns up or down only 
+
+[ bump_returns_up, bump_returns_down, no_response ] = filter_bump_returns_experiment_return_up_down_post_jump( basedir, cur_dirs );
+
+% Classify by bump returns up or down only
+bump_conditions = { bump_returns_up, bump_returns_down };
+bump_conditions_str = { 'bump_returns_up', 'bump_returns_down' };
 
 %% 
-display_CX_summary_all_flies( bump_conditions, bump_conditions_str, bump_win_all, yaw_win_all, fwd_win_all, ephys_win_all, timebase_bump, timebase_yaw, timebase_ephys, experiment_type_str );
+[ bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, ephys_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys  ] = align_by_bump_velocity_with_PSTH( basedir, cur_dirs, bump_conditions, bump_conditions_str );
+
+%% 
+% display_CX_summary_all_flies( bump_conditions, bump_conditions_str, bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, ephys_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, experiment_type_str );
+
+display_CX_summary_all_flies_workaround_3( bump_conditions, bump_conditions_str, bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, ephys_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, experiment_type_str );
+
+
+%% Display experiment vs. control 
+
+control_data = load('/data/drive2/sasha/CX_summary/control_data.mat');
+experiment_data = load('/data/drive2/sasha/CX_summary/experiment_data.mat');
+
+NUM_CONDITIONS = length( bump_conditions );
+display_CX_summary_all_flies_experiment_vs_control( experiment_data, control_data, NUM_CONDITIONS, '/data/drive2/sasha/CX_summary/');
 
 
 %% Control: Calculate velocity of spontaneous bump motion along with yaw and ephys. 

@@ -1,4 +1,4 @@
-function [ bump_win_all, yaw_win_all, fwd_win_all, ephys_win_all, timebase_bump, timebase_yaw, timebase_ephys ] = align_by_bump_velocity( basedir, directories, bump_conditions, bump_conditions_str )
+function [ bump_win_all, yaw_win_all, fwd_win_all, ephys_win_all, timebase_bump, timebase_yaw, timebase_ephys ] = align_by_bump_velocity_v2( basedir, directories, bump_conditions, bump_conditions_str )
 
 settings = sensor_settings;
 BALL_FR = settings.sensorPollFreq;
@@ -16,10 +16,12 @@ BUMP_CONDITION_UNDEFINED         = 38;
 
 DEBUG_VERBOSE                    = 77;
 DEBUG_OFF                        = 78;
-DEBUG_LEVEL                      = DEBUG_OFF;
+DEBUG_LEVEL                      = DEBUG_VERBOSE;
 
 TIME_BEFORE_EB_VEL_CHANGE        = 1.0;
 TIME_AFTER_EB_VEL_CHANGE         = 2.0;
+
+BUMP_SPEED_THRESHOLD             = 0.5; % wedges/s
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 bump_win_all   = cell( length(bump_conditions), length( directories ));
@@ -35,9 +37,9 @@ for cond = 1:length(bump_conditions)
     cur_cond_str = bump_conditions_str{cond};
     
     BUMP_CONDITION = BUMP_CONDITION_UNDEFINED;
-    if( strcmp(cur_cond_str, 'bump_jumps_up_returns_down') == 1 ) 
+    if( ( strcmp(cur_cond_str, 'bump_jumps_up_returns_down') == 1 ) || ( strcmp(cur_cond_str, 'bump_returns_down') == 1 ) )
         BUMP_CONDITION = BUMP_CONDITION_RETURNED_DOWN;
-    elseif( strcmp(cur_cond_str, 'bump_jumps_down_returns_up') == 1 )  
+    elseif( ( strcmp(cur_cond_str, 'bump_jumps_down_returns_up') == 1 ) || ( strcmp(cur_cond_str, 'bump_returns_up') == 1 ) )
         BUMP_CONDITION = BUMP_CONDITION_RETURNED_UP;
     elseif( strcmp(cur_cond_str, 'no_response') == 1 )  
         BUMP_CONDITION = BUMP_CONDITION_NO_RESPONSE;
@@ -132,9 +134,9 @@ for cond = 1:length(bump_conditions)
             cur_ephys = ephys_data( cur_stim_id, : );
             
             % remove spikes and drift
-            FILT_FACTOR = 0.06;
+            FILT_FACTOR = 0.04;
             cur_Vm_w_drift = medfilt1( cur_ephys, FILT_FACTOR * EPHYS_FR, 'truncate' );
-            cur_Vm = cur_Vm_w_drift - mean( cur_Vm_w_drift );
+            cur_Vm = cur_Vm_w_drift - mean( cur_Vm_w_drift );                        
             
             % Take max or min depending on condition
             bump_vel = diff( cur_bump_tc ) / dt_bump;
@@ -147,6 +149,13 @@ for cond = 1:length(bump_conditions)
                 bump_vel_to_search = -1.0*bump_vel;            
             else
                 bump_vel_to_search = bump_vel;                
+            end
+                                    
+            % Check that the average bump speed is about a threshold. This
+            % eliminates cases where there isn't a clear peak in bump
+            % movement.
+            if( mean(abs(bump_vel_to_search)) < BUMP_SPEED_THRESHOLD )
+                continue;
             end
             
             % Filter out noise from            
@@ -206,8 +215,7 @@ for cond = 1:length(bump_conditions)
                 plot( t_ephys_w, cur_Vm );                
                 ylabel('Vm (mV)');
                 xlabel('Time (s)');
-                
-                
+                        
                 % waitforbuttonpress;
                 linkaxes(ax1, 'x');
                 saveas(f, [t_now_analysis_path '/eb_bump_vel_peak_detect_' cur_cond_str '_stim_' num2str( s ) '.fig'] );
@@ -377,5 +385,14 @@ for cond = 1:length(bump_conditions)
         end
     end    
 end
+% 
+% bump_win_all   = cell( length(bump_conditions), length( directories ));
+% yaw_win_all    = cell( length(bump_conditions), length( directories ));
+% fwd_win_all    = cell( length(bump_conditions), length( directories ));
+% ephys_win_all  = cell( length(bump_conditions), length( directories ));
+% timebase_bump  = cell( length(bump_conditions), length( directories ));
+% timebase_yaw   = cell( length(bump_conditions), length( directories ));
+% timebase_ephys = cell( length(bump_conditions), length( directories ));
+
 end
 

@@ -1,4 +1,4 @@
-function [ cur_psth ] = calculate_psth(volts_t, vel_t, voltage, VOLTAGE_SR, SPIKE_THRESHOLD, BIN_SIZE);
+function [ cur_psth ] = calculate_psth_debug(volts_t, vel_t, voltage, VOLTAGE_SR, SPIKE_THRESHOLD, BIN_SIZE, DEBUG_FLAG)
 
 USE_INST_FIRING_RATE = 0;
 USE_EXP_FILTER = 1;
@@ -40,6 +40,11 @@ end
 % [~, locs] = findpeaks(volts_thresh, 'MinPeakProminence', 0.02, 'Annotate','extents');
 [~, locs] = findpeaks(volts_thresh, 'MinPeakDistance', 0.005 * VOLTAGE_SR );
 % disp(['Got here: 3']);
+
+dummy = 0;
+if( DEBUG_FLAG == 1 )
+    dummy = 1;
+end
 
 spikes = zeros(1, length(delta_Vm));
 spikes(locs+1) = 1;

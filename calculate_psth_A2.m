@@ -4,7 +4,7 @@ USE_INST_FIRING_RATE = 0;
 USE_EXP_FILTER = 1;
 USE_HAMMING_FILTER = 0;
 
-disp(['Got here: 2']);
+% disp(['Got here: 2']);
 %%%
 % Get spikes from a voltage trace (current clamp)
 %%%
@@ -13,7 +13,7 @@ delta_Vm = voltage - VmFilt;
 
 d = diff(delta_Vm);
 
-disp(['Got here: 1']);
+% disp(['Got here: 1']);
 
 volts_thresh = d;
 volts_thresh( find(d < SPIKE_THRESHOLD) ) = 0;
@@ -40,7 +40,7 @@ end
 % [~, locs] = findpeaks(volts_thresh, 'MinPeakProminence', 0.02, 'Annotate','extents');
 [~, locs] = findpeaks(volts_thresh, 'MinPeakDistance', 0.005 * VOLTAGE_SR );
 
-disp(['Got here: 3']);
+% disp(['Got here: 3']);
 
 spikes = zeros(1, length(delta_Vm));
 spikes(locs+1) = 1;

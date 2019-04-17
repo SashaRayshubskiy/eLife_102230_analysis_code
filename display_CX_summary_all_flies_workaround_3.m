@@ -1,4 +1,4 @@
-function display_CX_summary_all_flies( bump_conditions, bump_conditions_str,  bump_pos_win_all, bump_win_all, ...
+function display_CX_summary_all_flies_workaround_3( bump_conditions, bump_conditions_str,  bump_pos_win_all, bump_win_all, ...
                                        yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, ...
                                        timebase_bump, timebase_yaw, timebase_Vm, experiment_type_str )
 
@@ -169,11 +169,16 @@ for cond = 1:size( bump_win_all, 1 )
     
     hold on;
     
-    fh = fill( [Vm_t, fliplr(Vm_t)], ...
-    [(Vm_avg-Vm_sem) fliplr((Vm_avg+Vm_sem))], ...
-    sem_clr );
-    set(fh, 'EdgeColor', 'None');
+%     fh = fill( [Vm_t, fliplr(Vm_t)], ...
+%     [(Vm_avg-Vm_sem) fliplr((Vm_avg+Vm_sem))], ...
+%     sem_clr );
+%     set(fh, 'EdgeColor', 'None');
+    
     plot( Vm_t, Vm_avg, 'color', avg_clr );
+    plot( Vm_t, Vm_avg + Vm_sem, 'color', sem_clr );
+    plot( Vm_t, Vm_avg - Vm_sem, 'color', sem_clr );
+    
+    
     ylabel('Vm (mV)');
 
     ax1(6) = subplot(6,1,6);

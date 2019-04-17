@@ -1,7 +1,13 @@
-function display_CX_summary_all_flies( bump_conditions, bump_conditions_str,  bump_pos_win_all, bump_win_all, ...
-                                       yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, ...
-                                       timebase_bump, timebase_yaw, timebase_Vm, experiment_type_str )
+function display_CX_summary_all_flies_workaround_MATLAB_BUG( bump_conditions, bump_conditions_str,  bump_pos_win_all, bump_win_all, ...
+                                                             yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, ...
+                                                             timebase_bump, timebase_yaw, timebase_Vm, experiment_type_str )
+SHOW_FIRING_RATE = 11;
+SHOW_VM          = 12;
 
+% DISPAY_TYPE = SHOW_FIRING_RATE;
+DISPLAY_TYPE = SHOW_VM;
+                                                         
+                                                    
 save_params.bump_conditions = bump_conditions;
 save_params.bump_conditions_str = bump_conditions_str;
 
@@ -108,7 +114,7 @@ for cond = 1:size( bump_win_all, 1 )
         continue;
     end
     
-    ax1(1) = subplot(6,1,1);
+    ax1(1) = subplot(5,1,1);
 
     bump_sem = get_sem(bump_pos_all,1);
     bump_avg = mean( bump_pos_all );        
@@ -122,7 +128,7 @@ for cond = 1:size( bump_win_all, 1 )
     pl(cond) = plot( bump_t, bump_avg, 'color', avg_clr );
     ylabel('EB bump position (wedge id)');
     
-    ax1(2) = subplot(6,1,2);
+    ax1(2) = subplot(5,1,2);
     
     bump_sem = get_sem(bump_vel_all,1);
     bump_avg = mean( bump_vel_all );        
@@ -136,7 +142,7 @@ for cond = 1:size( bump_win_all, 1 )
     pl(cond) = plot( bump_t, bump_avg, 'color', avg_clr );
     ylabel('EB bump velocity (wedge/s)');
 
-    ax1(3) = subplot(6,1,3);
+    ax1(3) = subplot(5,1,3);
     fwd_sem = get_sem( fwd_all,1);
     fwd_avg = mean( fwd_all );        
     
@@ -150,7 +156,7 @@ for cond = 1:size( bump_win_all, 1 )
     plot( yaw_t, fwd_avg, 'color', avg_clr );
     ylabel('Fwd (au/s)');
 
-    ax1(4) = subplot(6,1,4);
+    ax1(4) = subplot(5,1,4);
     yaw_sem = get_sem( yaw_all,1);
     yaw_avg = mean( yaw_all );        
     
@@ -163,33 +169,37 @@ for cond = 1:size( bump_win_all, 1 )
     plot( yaw_t, yaw_avg, 'color', avg_clr );
     ylabel('Yaw (au/s)');
 
-    ax1(5) = subplot(6,1,5);
-    Vm_sem = get_sem(Vm_all,1);
-    Vm_avg = mean( Vm_all );        
-    
-    hold on;
-    
-    fh = fill( [Vm_t, fliplr(Vm_t)], ...
-    [(Vm_avg-Vm_sem) fliplr((Vm_avg+Vm_sem))], ...
-    sem_clr );
-    set(fh, 'EdgeColor', 'None');
-    plot( Vm_t, Vm_avg, 'color', avg_clr );
-    ylabel('Vm (mV)');
 
-    ax1(6) = subplot(6,1,6);
-    PSTH_sem = get_sem(PSTH_all,1);
-    PSTH_avg = mean( PSTH_all );        
-    
-    hold on;
-    
-    fh = fill( [yaw_t, fliplr(yaw_t)], ...
-    [(PSTH_avg-PSTH_sem) fliplr((PSTH_avg+PSTH_sem))], ...
-    sem_clr );
-    set(fh, 'EdgeColor', 'None');
-    plot( yaw_t, PSTH_avg, 'color', avg_clr );
-    ylabel('PSTH (spikes/s)');    
+    if( DISPLAY_TYPE == SHOW_VM )
+        ax1(5) = subplot(5,1,5);
+        Vm_sem = get_sem(Vm_all,1);
+        Vm_avg = mean( Vm_all );
+        
+        hold on;
+        
+        fh = fill( [Vm_t, fliplr(Vm_t)], ...
+            [(Vm_avg-Vm_sem) fliplr((Vm_avg+Vm_sem))], ...
+            sem_clr );
+        set(fh, 'EdgeColor', 'None');
+        plot( Vm_t, Vm_avg, 'color', avg_clr );
+        ylabel('Vm (mV)');
+    else
+        ax1(5) = subplot(5,1,5);
+        PSTH_sem = get_sem(PSTH_all,1);
+        PSTH_avg = mean( PSTH_all );
+        
+        hold on;
+        
+        fh = fill( [yaw_t, fliplr(yaw_t)], ...
+            [(PSTH_avg-PSTH_sem) fliplr((PSTH_avg+PSTH_sem))], ...
+            sem_clr );
+        set(fh, 'EdgeColor', 'None');
+        plot( yaw_t, PSTH_avg, 'color', avg_clr );
+        ylabel('PSTH (spikes/s)');
+    end
     
     xlabel('Time from max bump return vel (s)');
+    xlim([-2 1.5]);
     linkaxes(ax1, 'x');
 end
 
@@ -202,8 +212,14 @@ elseif( length( pl ) == 3 )
 end
 set(ll, 'Interpreter', 'none');
 
-saveas(f, [ CX_summary_path '/' experiment_type_str '_bump_conditions_all_flies.fig' ]);
-saveas(f, [ CX_summary_path '/' experiment_type_str '_bump_conditions_all_flies.png' ]);
+if( DISPLAY_TYPE == SHOW_VM )
+    analysis_str = 'Vm';
+else
+    analysis_str = 'FR';
+end
+
+saveas(f, [ CX_summary_path '/' experiment_type_str '_bump_conditions_all_flies_' analysis_str '.fig' ]);
+saveas(f, [ CX_summary_path '/' experiment_type_str '_bump_conditions_all_flies_' analysis_str '.png' ]);
 
 end
 

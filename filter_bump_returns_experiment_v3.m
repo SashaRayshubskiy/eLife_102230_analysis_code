@@ -1,4 +1,4 @@
-function [ bump_jumps_up_returns_down, bump_jumps_down_returns_up, no_bump_jump ] = filter_bump_returns_experiment_v2( basedir, exp_directories )
+function [ bump_jumps_up_returns_down, bump_jumps_down_returns_up, no_bump_jump ] = filter_bump_returns_experiment_v3( basedir, exp_directories )
 
 settings = sensor_settings;
 BALL_FR = settings.sensorPollFreq;
@@ -69,10 +69,19 @@ for d = 1:length( exp_directories )
     smothed_bump_all_stims = [];
     vect_strength_check_all = [];
     
+    debug_stop = 1;
     for st = 1:size( bump_data, 1 )
         
         % [ smoothed_bump, cur_bump_tc ] = get_radial_weighted_avg_bump_pos_v3( squeeze( bump_data( st, :, : ) ) );
-        [ smoothed_bump, cur_bump_tc, vect_strength_check ] = get_radial_weighted_avg_bump_pos_vect_strengh_check( squeeze( bump_data( st, :, : ) ) );
+        % [ smoothed_bump, cur_bump_tc, vect_strength_check ] = get_radial_weighted_avg_bump_pos_vect_strengh_check( squeeze( bump_data( st, :, : ) ) );
+        
+        if( st == 29 )
+            debug_stop = debug_stop + 1;
+            bump_debug = squeeze( bump_data( st, :, : ) ) ;
+            save('/tmp/bump_debug.mat', 'bump_debug', 'bump_baseline_idx');
+        end
+        
+        [ smoothed_bump, cur_bump_tc, cur_bump_tc_unwrapped, vect_strength_check ] = get_radial_weighted_avg_bump_pos_vect_strengh_check_v2( squeeze( bump_data( st, :, : ) ) );
         
         vect_strength_check_all = horzcat( vect_strength_check_all, vect_strength_check );
         
@@ -80,25 +89,31 @@ for d = 1:length( exp_directories )
         
         % Rotate bump data so that the average pre-stim period is in the same
         % place for each trial.
+        BUMP_TC_FILTER_SAMPLE_POINTS = 5;
         baseline_vals = cur_bump_tc( bump_baseline_idx );
         baseline_non_nan = baseline_vals(~isnan(baseline_vals));        
-        bump_delta_tc = medfilt1( cur_bump_tc - mean(baseline_non_nan), 5, 'truncate' );        
+        bump_delta_tc = medfilt1( cur_bump_tc - mean(baseline_non_nan), BUMP_TC_FILTER_SAMPLE_POINTS, 'truncate' );        
         pre_stim_bump_t = find( (t_bump_w < 0) & ( t_bump_w > -1*STABLE_BUMP_BEFORE_STIM_T ));        
         pre_stim_bump_tc = bump_delta_tc( pre_stim_bump_t );
+
+        baseline_vals_uw = cur_bump_tc_unwrapped( bump_baseline_idx );
+        baseline_non_nan_uw = baseline_vals_uw(~isnan(baseline_vals_uw));        
+        bump_delta_tc_uw = medfilt1( cur_bump_tc_unwrapped - mean(baseline_non_nan_uw), BUMP_TC_FILTER_SAMPLE_POINTS, 'truncate' );        
+        pre_stim_bump_tc_uw = bump_delta_tc_uw( pre_stim_bump_t );
         
         % Check that none of the values in the prestim period are NaNs, and that the bump was stable        
-        if( ( sum( isnan( pre_stim_bump_tc ) ) == 0 ) && ( std( pre_stim_bump_tc ) < PRE_STIM_BUMP_STABILITY_THRESHOLD ) )
+        if( ( sum( isnan( pre_stim_bump_tc_uw ) ) == 0 ) && ( std( pre_stim_bump_tc_uw ) < PRE_STIM_BUMP_STABILITY_THRESHOLD  ) )
             passed_bump_stability_check(end+1) = st;
             passed_bump_stability_tc(end+1,:) = bump_delta_tc;
             
             subplot(1,2,1);
             hold on;
-            plot( t_bump_w, bump_delta_tc );            
+            plot( t_bump_w, bump_delta_tc, 'DisplayName', ['stim: ' num2str(st)] );            
         else
             failed_bump_stability_check(end+1) = st;
             subplot(1,2,2);
             hold on;
-            plot( t_bump_w, bump_delta_tc );
+            plot( t_bump_w, bump_delta_tc, 'DisplayName', ['stim: ' num2str(st)] );
         end
     end
     
@@ -175,44 +190,81 @@ for d = 1:length( exp_directories )
             bump_return_cutoff = find( t_bump_w <  BUMP_RETURN_MAX_TIME_CUTOFF );
             bump_return_eval_period = [jump_lookahead_window(end) : bump_return_cutoff(end)];
 
-            CUR_RETURN_STATE = BUMP_RETURN_STATE_OUTSIDE;
             bump_returns_flag = 0;
-
             returned_time_idx = -1;
-            kk = 1;
-            while( kk < length( bump_return_eval_period ) )
-            % for j = bump_return_eval_period
-                cur_j = bump_return_eval_period(kk);
-                cur_bump_pos = cur_bump_tc( cur_j );
                 
-                if( CUR_RETURN_STATE == BUMP_RETURN_STATE_OUTSIDE )
-                    
-                    if( abs(cur_bump_pos) <= BUMP_RETURN_ZONE )
-                        CUR_RETURN_STATE = BUMP_RETURN_STATE_INSIDE;
-                        inside_return_zone_cnt = 1;
-                    end
+            % Determine the first crossing back to the home zone.
+            bump_home_return_crossings = find( abs(cur_bump_tc(bump_return_eval_period)) < BUMP_RETURN_ZONE );
+            if( length( bump_home_return_crossings ) == 0 )
+                bump_returns_flag = 0;
+                returned_time_idx = -1;               
+            else                                                
+                % Check that the average bump position is within the home zone
+                % for a certain window after the initial crossing.                
+                first_crossing_index = bump_home_return_crossings(1);                                
+                end_of_crossing_window = -1;
                 
-                elseif ( CUR_RETURN_STATE == BUMP_RETURN_STATE_INSIDE )
-                    if( abs(cur_bump_pos) <= BUMP_RETURN_ZONE )
-                        inside_return_zone_cnt = inside_return_zone_cnt + 1;
-%                     else
-%                         CUR_RETURN_STATE = BUMP_RETURN_STATE_OUTSIDE;
-%                         inside_return_zone_cnt = 0;
-                    end
-                    
-                    if( inside_return_zone_cnt >= BUMP_RETURN_STABILITY_WINDOW_IN_SAMPLES ) 
-                        % Victory, we found a bump return.
-                        bump_returns_flag = 1;
-                        returned_time_idx = cur_j;
-                        
-                        % Classify the direction of bump return, as the
-                        % vector between the bump jump peak and the average
-                        % bump return path
-                        bump_return_direction = mean(cur_bump_tc(bump_return_eval_period(1:kk))) - cur_bump_tc(bump_return_eval_period(1));
-                        break;
-                    end
+                if( (first_crossing_index+BUMP_RETURN_STABILITY_WINDOW_IN_SAMPLES) <= length(bump_return_eval_period) )
+                    end_of_crossing_window = first_crossing_index + BUMP_RETURN_STABILITY_WINDOW_IN_SAMPLES;
+                else
+                    end_of_crossing_window = length( bump_return_eval_period );
                 end
-                kk = kk + 1;
+                
+                avg_bump_in_home_window = mean( abs(cur_bump_tc( bump_return_eval_period( first_crossing_index : end_of_crossing_window ))));                    
+
+                if( avg_bump_in_home_window < BUMP_RETURN_ZONE )
+                    bump_returns_flag = 1;
+                    returned_time_idx = bump_return_eval_period( end_of_crossing_window );
+                    
+                    % Classify the direction of bump return, as the
+                    % vector between the bump jump peak and the average
+                    % bump return path                    
+                    bump_return_direction = mean(cur_bump_tc(bump_return_eval_period(1:end_of_crossing_window))) - cur_bump_tc(bump_return_eval_period(1));
+                    
+                else
+                    % Failed to find a home crossing.
+                    bump_returns_flag = 0;
+                    returned_time_idx = -1;               
+                end                                
+            end                        
+                        
+            if( 0 )
+                CUR_RETURN_STATE = BUMP_RETURN_STATE_OUTSIDE;
+                kk = 1;
+                while( kk < length( bump_return_eval_period ) )
+                    % for j = bump_return_eval_period
+                    cur_j = bump_return_eval_period(kk);
+                    cur_bump_pos = cur_bump_tc( cur_j );
+                    
+                    if( CUR_RETURN_STATE == BUMP_RETURN_STATE_OUTSIDE )
+                        
+                        if( abs(cur_bump_pos) <= BUMP_RETURN_ZONE )
+                            CUR_RETURN_STATE = BUMP_RETURN_STATE_INSIDE;
+                            inside_return_zone_cnt = 1;
+                        end
+                        
+                    elseif ( CUR_RETURN_STATE == BUMP_RETURN_STATE_INSIDE )
+                        if( abs(cur_bump_pos) <= BUMP_RETURN_ZONE )
+                            inside_return_zone_cnt = inside_return_zone_cnt + 1;
+                            %                     else
+                            %                         CUR_RETURN_STATE = BUMP_RETURN_STATE_OUTSIDE;
+                            %                         inside_return_zone_cnt = 0;
+                        end
+                        
+                        if( inside_return_zone_cnt >= BUMP_RETURN_STABILITY_WINDOW_IN_SAMPLES )
+                            % Victory, we found a bump return.
+                            bump_returns_flag = 1;
+                            returned_time_idx = cur_j;
+                            
+                            % Classify the direction of bump return, as the
+                            % vector between the bump jump peak and the average
+                            % bump return path
+                            bump_return_direction = mean(cur_bump_tc(bump_return_eval_period(1:kk))) - cur_bump_tc(bump_return_eval_period(1));
+                            break;
+                        end
+                    end
+                    kk = kk + 1;
+                end
             end
             
             if( ( cur_mean_bump_jump > JUMP_THRESHOLD ) && (bump_returns_flag == 1) && ( bump_return_direction > 0 ))

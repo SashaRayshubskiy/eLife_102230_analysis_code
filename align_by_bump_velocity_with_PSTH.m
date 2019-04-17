@@ -1,8 +1,11 @@
-function [ bump_win_all, yaw_win_all, fwd_win_all, ephys_win_all, timebase_bump, timebase_yaw, timebase_ephys ] = align_by_bump_velocity( basedir, directories, bump_conditions, bump_conditions_str )
+function [ bump_pos_win_all, bump_win_all, yaw_win_all, fwd_win_all, ephys_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys ] = align_by_bump_velocity_with_PSTH( basedir, directories, bump_conditions, bump_conditions_str )
 
 settings = sensor_settings;
 BALL_FR = settings.sensorPollFreq;
 EPHYS_FR = settings.sampRate;
+
+psth_dt_samples = EPHYS_FR/BALL_FR;
+SPIKE_THRESHOLD_A2 = 0.3;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % CONSTANTS 
@@ -18,14 +21,19 @@ DEBUG_VERBOSE                    = 77;
 DEBUG_OFF                        = 78;
 DEBUG_LEVEL                      = DEBUG_OFF;
 
-TIME_BEFORE_EB_VEL_CHANGE        = 1.0;
+TIME_BEFORE_EB_VEL_CHANGE        = 2.5; % Used to be 1.0 s
 TIME_AFTER_EB_VEL_CHANGE         = 2.0;
+
+% BUMP_SPEED_THRESHOLD             = 0.5; % wedges/s CHANGED ON 4/12/2019
+BUMP_SPEED_THRESHOLD             = 0.1; % wedges/s
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+bump_pos_win_all = cell( length(bump_conditions), length( directories ));
 bump_win_all   = cell( length(bump_conditions), length( directories ));
 yaw_win_all    = cell( length(bump_conditions), length( directories ));
 fwd_win_all    = cell( length(bump_conditions), length( directories ));
 ephys_win_all  = cell( length(bump_conditions), length( directories ));
+PSTH_win_all   = cell( length(bump_conditions), length( directories ));
 timebase_bump  = cell( length(bump_conditions), length( directories ));
 timebase_yaw   = cell( length(bump_conditions), length( directories ));
 timebase_ephys = cell( length(bump_conditions), length( directories ));
@@ -35,9 +43,9 @@ for cond = 1:length(bump_conditions)
     cur_cond_str = bump_conditions_str{cond};
     
     BUMP_CONDITION = BUMP_CONDITION_UNDEFINED;
-    if( strcmp(cur_cond_str, 'bump_jumps_up_returns_down') == 1 ) 
+    if( ( strcmp(cur_cond_str, 'bump_jumps_up_returns_down') == 1 ) || ( strcmp(cur_cond_str, 'bump_returns_down') == 1 ) )
         BUMP_CONDITION = BUMP_CONDITION_RETURNED_DOWN;
-    elseif( strcmp(cur_cond_str, 'bump_jumps_down_returns_up') == 1 )  
+    elseif( ( strcmp(cur_cond_str, 'bump_jumps_down_returns_up') == 1 ) || ( strcmp(cur_cond_str, 'bump_returns_up') == 1 ) )
         BUMP_CONDITION = BUMP_CONDITION_RETURNED_UP;
     elseif( strcmp(cur_cond_str, 'no_response') == 1 )  
         BUMP_CONDITION = BUMP_CONDITION_NO_RESPONSE;
@@ -48,8 +56,10 @@ for cond = 1:length(bump_conditions)
     end
         
     for d = 1:length( directories )
-    % for d = 9
+    % for d = 2
         
+        BUMP_SPEED_THRESHOLD = directories{ d }{ 6 };
+    
         cur_datapath = directories{ d }{ 1 };
         cur_sid      = directories{ d }{ 2 };
         
@@ -82,14 +92,16 @@ for cond = 1:length(bump_conditions)
         
         dt_bump = t_bump_w(2) - t_bump_w(1);
 
-        bump_win    = [];
-        yaw_win     = [];
-        fwd_win     = [];
-        ephys_win   = [];
-        t_bump_win  = [];
-        t_yaw_win   = [];
-        t_ephys_win = [];
-        
+        bump_vel_win = [];
+        bump_pos_win = [];
+        yaw_win      = [];
+        fwd_win      = [];
+        ephys_win    = [];
+        PSTH_win     = [];
+        t_bump_win   = [];
+        t_yaw_win    = [];
+        t_ephys_win  = [];
+                
         if( DEBUG_LEVEL == DEBUG_VERBOSE )
             aligned_data_fig = figure('units','normalized','outerposition',[0 0 1 1]);
         end
@@ -132,9 +144,19 @@ for cond = 1:length(bump_conditions)
             cur_ephys = ephys_data( cur_stim_id, : );
             
             % remove spikes and drift
-            FILT_FACTOR = 0.06;
+            FILT_FACTOR = 0.04;
             cur_Vm_w_drift = medfilt1( cur_ephys, FILT_FACTOR * EPHYS_FR, 'truncate' );
-            cur_Vm = cur_Vm_w_drift - mean( cur_Vm_w_drift );
+            cur_Vm = cur_Vm_w_drift - mean( cur_Vm_w_drift );                      
+            
+            % With PSTH 
+            SPIKE_THRESHOLD_A2 = directories{ d }{ 3 };
+            
+            cur_debug = 0;
+            if( s == 17 )
+                cur_debug = 1;
+            end
+            
+            [ cur_PSTH ] = calculate_psth_debug( t_ephys_w(1:end-1), t_yaw_w(1:end-1), cur_ephys(1:end-1), EPHYS_FR, SPIKE_THRESHOLD_A2, psth_dt_samples, cur_debug );
             
             % Take max or min depending on condition
             bump_vel = diff( cur_bump_tc ) / dt_bump;
@@ -147,6 +169,13 @@ for cond = 1:length(bump_conditions)
                 bump_vel_to_search = -1.0*bump_vel;            
             else
                 bump_vel_to_search = bump_vel;                
+            end
+                                    
+            % Check that the average bump speed is about a threshold. This
+            % eliminates cases where there isn't a clear peak in bump
+            % movement.
+            if( mean(abs(bump_vel_to_search)) < BUMP_SPEED_THRESHOLD )
+                continue;
             end
             
             % Filter out noise from            
@@ -165,11 +194,12 @@ for cond = 1:length(bump_conditions)
                 EB_bump_vel_align_idx = locs(1);
             end
             
-            if( DEBUG_LEVEL == DEBUG_VERBOSE )            
+            % if( DEBUG_LEVEL == DEBUG_VERBOSE )            
+            if( s == 17 ) % 17 is a nice example for fly _17
             % if( 0 )            
                 f = figure('units','normalized','outerposition',[0 0 1 1]);
 
-                ax1(1) = subplot(4, 1, 1);
+                ax1(1) = subplot(5, 1, 1);
                 hold on;
                 imagesc( t_bump_w, [1:size(cur_bump_rois,1)], cur_bump_rois );
                 colormap(flipud(gray));
@@ -187,27 +217,32 @@ for cond = 1:length(bump_conditions)
                 BUMP_OFFSET = 6.0;
                 plot( t_bump_w, cur_bump + BUMP_OFFSET );
 
-                ax1(2) = subplot(4, 1, 2);
+                ax1(2) = subplot(5, 1, 2);
                 hold on;
                 plot( t_bump_w( cur_bump_return_idx_range(1:end-1) ), bump_vel_to_search );
                 plot( t_bump_w( cur_bump_return_idx_range(1)), 0, 'o' );
                 plot( t_bump_w( cur_bump_return_idx_range(end-1)), 0, 'o' );
-                plot( t_bump_w( EB_bump_vel_align_idx-1 ), bump_vel_to_search( EB_bump_vel_align_idx_in_bump_vel_to_search ), 'X', 'color', 'g' );
+                plot( t_bump_w( EB_bump_vel_align_idx ), bump_vel_to_search( EB_bump_vel_align_idx_in_bump_vel_to_search ), 'X', 'color', 'g' );
                 
                 ylabel('EB bump vel (au/s)');
                 
-                ax1(3) = subplot(4, 1, 3);
+                ax1(3) = subplot(5, 1, 3);
                 hold on;
                 plot( t_yaw_w, cur_yaw );                
                 ylabel('Yaw vel (au/s)');
                 
-                ax1(4) = subplot(4, 1, 4);
+                ax1(4) = subplot(5, 1, 4);
                 hold on;
-                plot( t_ephys_w, cur_Vm );                
+                plot( t_ephys_w, cur_ephys -    mean( cur_Vm_w_drift ) );                
                 ylabel('Vm (mV)');
                 xlabel('Time (s)');
-                
-                
+
+                ax1(5) = subplot(5, 1, 5);
+                hold on;
+                plot( t_yaw_w(1:end-1), cur_PSTH );                
+                ylabel('Firing rate (spikes/s)');
+                xlabel('Time (s)');
+
                 % waitforbuttonpress;
                 linkaxes(ax1, 'x');
                 saveas(f, [t_now_analysis_path '/eb_bump_vel_peak_detect_' cur_cond_str '_stim_' num2str( s ) '.fig'] );
@@ -222,12 +257,21 @@ for cond = 1:length(bump_conditions)
             EB_FRAMES_AFTER_EB_VEL_CHANGE  = floor( TIME_AFTER_EB_VEL_CHANGE * VPS );
             
             cur_EB_bump_vel_win_start  = EB_bump_vel_align_idx - EB_FRAMES_BEFORE_EB_VEL_CHANGE;
-            cur_EB_bump_vel_win_end  = EB_bump_vel_align_idx + EB_FRAMES_AFTER_EB_VEL_CHANGE;
+            cur_EB_bump_vel_win_end    = EB_bump_vel_align_idx + EB_FRAMES_AFTER_EB_VEL_CHANGE;
             
             if( ( cur_EB_bump_vel_win_start < 1) || ( cur_EB_bump_vel_win_end >= length( cur_bump ) ) )
                 % skip this stimulus
+                disp(['Stim removed: out of bounds in alignment: range: { 1, ' num2str(length( cur_bump )) ' }  cur stim: { ' num2str(cur_EB_bump_vel_win_start) ' , ' num2str(cur_EB_bump_vel_win_end) ' }']);
                 continue;
-            end            
+            end
+            
+%             if( cur_EB_bump_vel_win_start < 1) 
+%                 cur_EB_bump_vel_win_start = 1;
+%             end            
+%             
+%             if( cur_EB_bump_vel_win_end >= length( cur_bump ) )
+%                 cur_EB_bump_vel_win_end = length( cur_bump )-1; % Need to account for n-1 in vel vs. pos
+%             end
                   
             % Align yaw
             xx = find( t_yaw_w < EB_bump_vel_align );
@@ -236,14 +280,23 @@ for cond = 1:length(bump_conditions)
             YAW_FRAMES_BEFORE_EB_VEL_CHANGE = floor( TIME_BEFORE_EB_VEL_CHANGE * BALL_FR );
             YAW_FRAMES_AFTER_EB_VEL_CHANGE  = floor( TIME_AFTER_EB_VEL_CHANGE * BALL_FR );
             cur_yaw_win_start  = yaw_align_idx - YAW_FRAMES_BEFORE_EB_VEL_CHANGE;
-            cur_yaw_win_end  = yaw_align_idx + YAW_FRAMES_AFTER_EB_VEL_CHANGE;
+            cur_yaw_win_end    = yaw_align_idx + YAW_FRAMES_AFTER_EB_VEL_CHANGE;
             
             if( ( cur_yaw_win_start < 1) || ( cur_yaw_win_end > length( cur_yaw ) ) )
                 % skip this stimulus
+                disp(['Stim removed: out of bounds in alignment: range: { 1, ' num2str(length( cur_yaw )) ' }  cur stim: { ' num2str(cur_yaw_win_start) ' , ' num2str(cur_yaw_win_end) ' }']);                
                 continue;
-            end            
+            end
             
-            % Align ephys
+%             if( cur_yaw_win_start < 1)
+%                 cur_yaw_win_start = 1;
+%             end            
+%             
+%             if( cur_yaw_win_end > length( cur_yaw )  )
+%                 cur_yaw_win_end = length( cur_yaw );
+%             end
+            
+            % Align ephys (Vm)
             xx = find( t_ephys_w < EB_bump_vel_align );
             ephys_align_idx = xx(end);
             
@@ -254,12 +307,24 @@ for cond = 1:length(bump_conditions)
 
             if( ( cur_ephys_win_start < 1) || ( cur_ephys_win_end > length( cur_ephys ) ) )
                 % skip this stimulus
+                disp(['Stim removed: out of bounds in alignment: range: { 1, ' num2str(length( cur_ephys )) ' }  cur stim: { ' num2str(cur_ephys_win_start) ' , ' num2str(cur_ephys_win_end) ' }']);
                 continue;
-            end                        
+            end
+            
+%             if( cur_ephys_win_start < 1)
+%                 cur_ephys_win_start = 1;
+%             end            
+%             
+%             if( cur_ephys_win_end > length( cur_ephys )  )
+%                 cur_ephys_win_end = length( cur_ephys );
+%             end            
             
             % If we got this far, then the indicies are within range
+            cur_bump_win = cur_bump( cur_EB_bump_vel_win_start:cur_EB_bump_vel_win_end );
+            bump_pos_win(end+1,:) = cur_bump_win;            
+            
             cur_EB_vel_win = bump_vel_all( cur_EB_bump_vel_win_start:cur_EB_bump_vel_win_end );
-            bump_win(end+1,:) = cur_EB_vel_win;
+            bump_vel_win(end+1,:) = cur_EB_vel_win;
             t_bump_win = t_bump_w( cur_EB_bump_vel_win_start:cur_EB_bump_vel_win_end ) - EB_bump_vel_align;
 
             % Align yaw
@@ -271,71 +336,102 @@ for cond = 1:length(bump_conditions)
             cur_fwd_win = cur_fwd( cur_yaw_win_start:cur_yaw_win_end );
             fwd_win(end+1,:) = cur_fwd_win;            
             
-            % Align ephys
+            % Align ephys (Vm)
             cur_ephys_win = cur_Vm( cur_ephys_win_start:cur_ephys_win_end );
             ephys_win(end+1,:) = cur_ephys_win;
             t_ephys_win = t_ephys_w( cur_ephys_win_start:cur_ephys_win_end ) - t_ephys_w(ephys_align_idx);
- 
+
+            % Align ephys (FR)
+            cur_PSTH_win = cur_PSTH( cur_yaw_win_start:cur_yaw_win_end );
+            PSTH_win(end+1,:) = cur_PSTH_win;
+
             if( DEBUG_LEVEL == DEBUG_VERBOSE )
                 figure(aligned_data_fig);
-                ax1(1) = subplot(4,1,1);
+                ax2(1) = subplot(6,1,1);
+                hold on;
+                plot( t_bump_win, cur_bump_win, '-' );
+                ylim([-5 5]);
+                ylabel('PVA position (wedge loc)');
+                tt = title( [cur_datapath ': ' cur_cond_str ]);
+                set(tt, 'Interpreter', 'none');
+
+                ax2(2) = subplot(6,1,2);
                 hold on;
                 plot( t_bump_win, cur_EB_vel_win, '-' );
                 ylim([-15 15]);
                 ylabel('EB Vel (au/s)');
-                tt = title( [cur_datapath ': ' cur_cond_str ]);
-                set(tt, 'Interpreter', 'none');
                 
-                ax1(2) = subplot(4,1,2);
+                ax2(3) = subplot(6,1,3);
                 hold on;
                 plot( t_yaw_win, cur_fwd_win, '-' );
                 ylabel('Fwd (au/s)');
-                xlabel('Time (s)');
                 
-                ax1(3) = subplot(4,1,3);
+                ax2(4) = subplot(6,1,4);
                 hold on;
                 plot( t_yaw_win, cur_yaw_win, '-' );
                 ylabel('Yaw (au/s)');
                 
-                ax1(4) = subplot(4,1,4);
+                ax2(5) = subplot(6,1,5);
                 hold on;
                 plot( t_ephys_win, cur_ephys_win, '-' );
                 ylabel('Vm (mV)');
+                
+                ax2(6) = subplot(6,1,6);
+                hold on;
+                plot( t_yaw_win, cur_PSTH_win, '-' );
+                ylabel('PSTH (spikes/s)');
                 xlabel('Time (s)');
+                xlim([ t_yaw_win(1) t_yaw_win(end) ]);
+                %linkaxes(ax1, 'x');
             end
         end
         
-        bump_win_all{ cond, d }   = bump_win;
+        bump_pos_win_all{ cond, d }  = bump_pos_win;
+        bump_win_all{ cond, d }      = bump_vel_win;
         yaw_win_all{ cond, d }    = yaw_win;
         fwd_win_all{ cond, d }    = fwd_win;
         ephys_win_all{ cond, d }  = ephys_win;
+        PSTH_win_all{ cond, d }   = PSTH_win;
         timebase_bump{ cond, d }  = t_bump_win;
         timebase_yaw{ cond, d }   = t_yaw_win;
         timebase_ephys{ cond, d } = t_ephys_win;
         
         if( DEBUG_LEVEL == DEBUG_VERBOSE )
             
-            if( length( bump_win ) == 0 )
+            if( length( bump_vel_win ) == 0 )
                 continue;
             end
             
             figure(aligned_data_fig);
-            ax1(1) = subplot(4,1,1);
+            ax2(1) = subplot(6,1,1);
             hold on;
             
-            if( size(bump_win, 1) == 1 )
-                avg_bump = bump_win;
+            if( size(bump_pos_win, 1) == 1 )
+                avg_bump_pos = bump_pos_win;
             else
-                avg_bump = mean( bump_win );
+                avg_bump_pos = mean( bump_pos_win );
+            end
+            
+            plot( t_bump_win, avg_bump_pos, '-', 'LineWidth', 2.0 );
+            ylim([ -5 5 ]);
+            ylabel('PVA position (wedge loc)');
+            tt = title( [cur_datapath ': ' cur_cond_str ' ( ' num2str(size( bump_vel_win, 1 )) ')']);
+            set(tt, 'Interpreter', 'none');
+
+            ax2(2) = subplot(6,1,2);
+            hold on;
+            
+            if( size(bump_vel_win, 1) == 1 )
+                avg_bump = bump_vel_win;
+            else
+                avg_bump = mean( bump_vel_win );
             end
             
             plot( t_bump_win, avg_bump, '-', 'LineWidth', 2.0 );
             ylim([-15 15]);
             ylabel('EB Vel (au/s)');
-            tt = title( [cur_datapath ': ' cur_cond_str ' ( ' num2str(size( bump_win, 1 )) ')']);
-            set(tt, 'Interpreter', 'none');
-            
-            ax1(2) = subplot(4,1,2);
+    
+            ax2(3) = subplot(6,1,3);
             hold on;
             
             if( size(fwd_win, 1) == 1 )
@@ -347,7 +443,7 @@ for cond = 1:length(bump_conditions)
             plot( t_yaw_win, avg_fwd, '-', 'LineWidth', 2.0 );
             ylabel('Fwd (au/s)');
             
-            ax1(3) = subplot(4,1,3);
+            ax2(4) = subplot(6,1,4);
             hold on;
             if( size(yaw_win, 1) == 1 )
                 avg_yaw = yaw_win;
@@ -358,7 +454,7 @@ for cond = 1:length(bump_conditions)
             plot( t_yaw_win, avg_yaw, '-', 'LineWidth', 2.0 );
             ylabel('Yaw (au/s)');
             
-            ax1(4) = subplot(4,1,4);
+            ax2(5) = subplot(6,1,5);
             hold on;
             
             if( size(ephys_win, 1) == 1 )
@@ -369,13 +465,36 @@ for cond = 1:length(bump_conditions)
             
             plot( t_ephys_win, avg_ephys, '-', 'LineWidth', 2.0 );
             ylabel('Vm (mV)');
+
+            ax2(6) = subplot(6,1,6);
+            hold on;
+            
+            if( size(PSTH_win, 1) == 1 )
+                avg_PSTH = PSTH_win;
+            else
+                avg_PSTH = mean( PSTH_win );
+            end                
+            
+            plot( t_yaw_win, avg_PSTH, '-', 'LineWidth', 2.0 );
+            ylabel('Firing rate (spike/s)');
+            
             xlabel('Time (s)');
-            linkaxes(ax1, 'x');
+            xlim([ t_yaw_win(1) t_yaw_win(end) ]);
+            linkaxes(ax2, 'x');
             
             saveas( aligned_data_fig, [analysis_path '/' cur_cond_str '_bump_return_yaw_fwd_ephys_aligned.fig']);
             saveas( aligned_data_fig, [analysis_path '/' cur_cond_str '_bump_return_yaw_fwd_ephys_aligned.png']);
         end
     end    
 end
+% 
+% bump_win_all   = cell( length(bump_conditions), length( directories ));
+% yaw_win_all    = cell( length(bump_conditions), length( directories ));
+% fwd_win_all    = cell( length(bump_conditions), length( directories ));
+% ephys_win_all  = cell( length(bump_conditions), length( directories ));
+% timebase_bump  = cell( length(bump_conditions), length( directories ));
+% timebase_yaw   = cell( length(bump_conditions), length( directories ));
+% timebase_ephys = cell( length(bump_conditions), length( directories ));
+
 end
 

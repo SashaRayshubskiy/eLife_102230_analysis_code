@@ -1,6 +1,6 @@
 function extract_stim_windows( basedir, directories )
 
-DISPLAY_INDIVIDUAL_STIMS = 1;
+DISPLAY_INDIVIDUAL_STIMS = 0;
 DISPLAY_ALL_STIMS        = 1;
 
 ac = get_analysis_constants;
@@ -134,14 +134,14 @@ for d = 1:length( directories )
             hold on;
             
             % [dummy, cur_bump_tc] = max( squeeze(bump_in_window(i,:,:)));
-            cur_bump_tc = get_radial_weighted_avg_bump_pos_v3( squeeze(bump_in_window(i,:,:)) );
+            [dummy, cur_bump_tc] = get_radial_weighted_avg_bump_pos_v3( squeeze(bump_in_window(i,:,:)) );
             
             % Rotate bump data so that the average pre-stim period is in the same
             % place for each trial.
             baseline_vals = cur_bump_tc(bump_baseline_idx);
             baseline_non_nan = baseline_vals(~isnan(baseline_vals));
             
-            bump_delta_tc = medfilt1( cur_bump_tc - mean(baseline_non_nan), 5, 'truncate' );
+            bump_delta_tc = medfilt1( cur_bump_tc - mean(baseline_non_nan), 3, 'truncate' );
             
             bump_tc_all(end+1,:) = bump_delta_tc;
             plot(t_bump_w, bump_delta_tc, 'LineWidth', 1 );
