@@ -25,7 +25,8 @@ TIME_BEFORE_EB_VEL_CHANGE        = 2.5; % Used to be 1.0 s
 TIME_AFTER_EB_VEL_CHANGE         = 2.0;
 
 % BUMP_SPEED_THRESHOLD             = 0.5; % wedges/s CHANGED ON 4/12/2019
-BUMP_SPEED_THRESHOLD             = 0.1; % wedges/s
+BUMP_SPEED_THRESHOLD_MIN             = 0.1; % wedges/s
+BUMP_SPEED_THRESHOLD_MAX             = 20; % wedges/s
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 bump_pos_win_all = cell( length(bump_conditions), length( directories ));
@@ -58,7 +59,7 @@ for cond = 1:length(bump_conditions)
     for d = 1:length( directories )
     % for d = 2
         
-        BUMP_SPEED_THRESHOLD = directories{ d }{ 6 };
+        BUMP_SPEED_THRESHOLD_MIN = directories{ d }{ 6 };
     
         cur_datapath = directories{ d }{ 1 };
         cur_sid      = directories{ d }{ 2 };
@@ -152,10 +153,10 @@ for cond = 1:length(bump_conditions)
             SPIKE_THRESHOLD_A2 = directories{ d }{ 3 };
             
             cur_debug = 0;
-            if( s == 17 )
-                cur_debug = 1;
-            end
-            
+             if( s == 4 )
+                 cur_debug = 1;
+             end
+             
             [ cur_PSTH ] = calculate_psth_debug( t_ephys_w(1:end-1), t_yaw_w(1:end-1), cur_ephys(1:end-1), EPHYS_FR, SPIKE_THRESHOLD_A2, psth_dt_samples, cur_debug );
             
             % Take max or min depending on condition
@@ -170,11 +171,15 @@ for cond = 1:length(bump_conditions)
             else
                 bump_vel_to_search = bump_vel;                
             end
+            
+            % Remove artifactual peaks from bump wrapping
+            bump_vel_to_search( find( abs(bump_vel_to_search) >= BUMP_SPEED_THRESHOLD_MAX ) ) = 0;
+            
                                     
             % Check that the average bump speed is about a threshold. This
             % eliminates cases where there isn't a clear peak in bump
             % movement.
-            if( mean(abs(bump_vel_to_search)) < BUMP_SPEED_THRESHOLD )
+            if( mean(abs(bump_vel_to_search)) < BUMP_SPEED_THRESHOLD_MIN )
                 continue;
             end
             
@@ -194,8 +199,8 @@ for cond = 1:length(bump_conditions)
                 EB_bump_vel_align_idx = locs(1);
             end
             
-            % if( DEBUG_LEVEL == DEBUG_VERBOSE )            
-            if( s == 17 ) % 17 is a nice example for fly _17
+            if( DEBUG_LEVEL == DEBUG_VERBOSE )            
+            %if( s == 17 ) % 17 is a nice example for fly _17
             % if( 0 )            
                 f = figure('units','normalized','outerposition',[0 0 1 1]);
 
@@ -222,7 +227,7 @@ for cond = 1:length(bump_conditions)
                 plot( t_bump_w( cur_bump_return_idx_range(1:end-1) ), bump_vel_to_search );
                 plot( t_bump_w( cur_bump_return_idx_range(1)), 0, 'o' );
                 plot( t_bump_w( cur_bump_return_idx_range(end-1)), 0, 'o' );
-                plot( t_bump_w( EB_bump_vel_align_idx ), bump_vel_to_search( EB_bump_vel_align_idx_in_bump_vel_to_search ), 'X', 'color', 'g' );
+                plot( t_bump_w( EB_bump_vel_align_idx-1 ), bump_vel_to_search( EB_bump_vel_align_idx_in_bump_vel_to_search ), 'X', 'color', 'g' );
                 
                 ylabel('EB bump vel (au/s)');
                 
@@ -349,7 +354,7 @@ for cond = 1:length(bump_conditions)
                 figure(aligned_data_fig);
                 ax2(1) = subplot(6,1,1);
                 hold on;
-                plot( t_bump_win, cur_bump_win, '-' );
+                plot( t_bump_win, cur_bump_win, '-', 'DisplayName', [ 'stim: ' num2str(s) ] );
                 ylim([-5 5]);
                 ylabel('PVA position (wedge loc)');
                 tt = title( [cur_datapath ': ' cur_cond_str ]);

@@ -102,7 +102,8 @@ for d = 1:length( exp_directories )
         BUMP_TC_FILTER_SAMPLE_POINTS = 5;
         baseline_vals = cur_bump_tc( bump_baseline_idx );
         baseline_non_nan = baseline_vals(~isnan(baseline_vals));        
-        bump_delta_tc = medfilt1( cur_bump_tc - mean(baseline_non_nan), BUMP_TC_FILTER_SAMPLE_POINTS, 'truncate' );        
+        bump_delta_tc = medfilt1( cur_bump_tc - mean(baseline_non_nan), BUMP_TC_FILTER_SAMPLE_POINTS, 'truncate' );      
+        
         pre_stim_bump_t = find( (t_bump_w < 0) & ( t_bump_w > -1*STABLE_BUMP_BEFORE_STIM_T ));        
         pre_stim_bump_tc = bump_delta_tc( pre_stim_bump_t );
 
