@@ -128,11 +128,48 @@ experiment_type_str = 'experiment';
 cur_dirs = exp_directories;
 [exp_bump_jump_percent_per_fly] = calculate_percent_of_bump_jumps( basedir, cur_dirs, experiment_type_str );
 
-%% 
+%% Controls 1: Display percent of bump jumps
 experiment_type_str = 'control';
 cur_dirs = ctrl_directories;
 [ctl_bump_jump_percent_per_fly] = calculate_percent_of_bump_jumps( basedir, cur_dirs, experiment_type_str );
 
+%% Controls 1: Display percent of bump jumps
+
+%
+f = figure;
+SEM_DIM = 2;
+
+%color_per_fly = { rgb('Violet'), rgb('Red'), rgb('Black'), rgb('Blue') };
+color_per_fly = { rgb('Black'), rgb('Black'), rgb('Black'), rgb('Black') };
+
+for cond = [1 2]
+    
+    if( cond == 1 )
+        cur_data   = ctl_bump_jump_percent_per_fly * 100;
+    else
+        cur_data   = exp_bump_jump_percent_per_fly * 100;
+    end
+    
+    for d = 1:size( cur_data, 2 )
+        subplot( 1, 1, 1 );
+        hold on;
+        plot( cond, cur_data( d ), 'o', 'color', color_per_fly{d} )        
+    end
+    
+    subplot( 1, 1, 1 );
+    hold on;
+    data_avg = mean( cur_data, SEM_DIM );
+    plot( [cond-0.25, cond+0.25], [ data_avg, data_avg ]  );
+    ylim([0 100]);
+    ylabel('Percent jump');
+    set(gca, 'XTick', [1 2]);
+    set(gca, 'XTickLabel', {'Ctl', 'Exp'});
+end
+
+title('Percent jump');
+filename = [ '/data/drive2/sasha/CX_summary' ];
+saveas( f, [ filename '/percent_jump_summary.fig'] );
+saveas( f, [ filename '/percent_jump_summary.fig'] );
 
 %% Controls 2: Display exp vs. control for post stim A2 response: examine the effect of ATP stimulation on A2
 experiment_type_str = 'experiment';
