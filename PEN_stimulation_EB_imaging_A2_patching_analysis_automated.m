@@ -48,10 +48,10 @@ exp_directories = { { '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17', 0, 0.2, 0.
 % sid 0
 % datapath = '/data/drive2/sasha/190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04/';
 
-ctrl_directories = { { '181206_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_01', 0, 0.4 }, ... 
-                     { '190208_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_02', 0, 0.4 }, ... 
-                     { '190211_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_03', 1, 0.4 }, ... 
-                     { '190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04', 0, 0.4 } };
+ctrl_directories = { { '181206_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_01', 0, 0.4, 1.0 }, ... 
+                     { '190208_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_02', 0, 0.4, 1.0 }, ... 
+                     { '190211_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_03', 1, 0.4, 1.0 }, ... 
+                     { '190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04', 0, 0.4, 1.0 } };
 
 %%
 extract_key_variables( basedir, exp_directories );                 
@@ -122,22 +122,80 @@ display_CX_summary_all_flies_workaround_3( bump_conditions, bump_conditions_str,
 
 display_CX_summary_bar_plots_all_flies_use_mean( bump_conditions, bump_conditions_str, bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, ephys_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, experiment_type_str );
 
-%%
-ANALYSIS_TYPE = RUN_EXPERIMENT; 
-% ANALYSIS_TYPE = RUN_CONTROL; experiment_type_str = 'control';
-% ANALYSIS_TYPE = RUN_TEST; experiment_type_str = 'test';
 
+%% Controls 1: Display percent of bump jumps
+experiment_type_str = 'experiment';
+cur_dirs = exp_directories;
+[exp_bump_jump_percent_per_fly] = calculate_percent_of_bump_jumps( basedir, cur_dirs, experiment_type_str );
+
+%% 
+experiment_type_str = 'control';
+cur_dirs = ctrl_directories;
+[ctl_bump_jump_percent_per_fly] = calculate_percent_of_bump_jumps( basedir, cur_dirs, experiment_type_str );
+
+
+%% Controls 2: Display exp vs. control for post stim A2 response: examine the effect of ATP stimulation on A2
 experiment_type_str = 'experiment';
 cur_dirs = exp_directories;
 [ exp_bump_response, exp_fwd_response, exp_yaw_response, exp_ephys_response ] = calculate_A2_post_stim_response( basedir, cur_dirs, experiment_type_str );
 
+%
 experiment_type_str = 'control';
 cur_dirs = ctrl_directories;
 [ ctl_bump_response, ctl_fwd_response, ctl_yaw_response, ctl_ephys_response ] = calculate_A2_post_stim_response( basedir, cur_dirs, experiment_type_str );
 
+%
+f = figure;
+SEM_DIM = 2;
+
+%color_per_fly = { rgb('Violet'), rgb('Red'), rgb('Black'), rgb('Blue') };
+color_per_fly = { rgb('Black'), rgb('Black'), rgb('Black'), rgb('Black') };
+
+for cond = [1 2]
+    
+    if( cond == 1 )
+        cur_yaw   = exp_yaw_response;
+        cur_ephys = exp_ephys_response;
+    else
+        cur_yaw   = ctl_yaw_response;
+        cur_ephys = ctl_ephys_response;
+    end
+    
+    for d = 1:size( cur_yaw, 2 )
+        subplot( 1, 2, 1 );
+        hold on;
+        plot( cond, cur_yaw( d ), 'o', 'color', color_per_fly{d} )
+        
+        subplot( 1, 2, 2 );
+        hold on;
+        plot( cond, cur_ephys( d ), 'o', 'color', color_per_fly{d} )
+    end
+    
+    subplot( 1, 2, 1 );
+    hold on;
+    yaw_avg = mean( cur_yaw, SEM_DIM );
+    plot( [cond-0.25, cond+0.25], [ yaw_avg, yaw_avg ]  );
+    ylim([-100 100]);
+    ylabel('Yaw (deg/s)');    
+    set(gca, 'XTickLabel', {'0', 'Exp', 'Ctrl', '3'})
+    
+    subplot( 1, 2, 2 );
+    hold on;
+    ephys_avg = mean( cur_ephys, SEM_DIM );
+    plot( [cond-0.25, cond+0.25], [ ephys_avg, ephys_avg ] );  
+    ylim([-2 2]);
+    set(gca, 'XTickLabel', {'0', 'Exp', 'Ctrl', '3'})
+    ylabel('Vm (mv)');    
+end
+
+title('Post ATP injection response');
+filename = [ '/data/drive2/sasha/CX_summary' ];
+saveas( f, [ filename '/post_stim_response_summary.fig'] );
+saveas( f, [ filename '/post_stim_response_summary.png'] );
 
 
 
+% ATTIC
 %% Display experiment vs. control 
 
 control_data = load('/data/drive2/sasha/CX_summary/control_data.mat');

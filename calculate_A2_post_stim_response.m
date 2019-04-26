@@ -32,8 +32,8 @@ ephys_response = [];
 
 for d = 1:length( data_dirs )
     
-    JUMP_THRESHOLD               = data_dirs{d}{4};
-    BUMP_RETURN_STABILITY_WINDOW = data_dirs{d}{5};
+%    JUMP_THRESHOLD               = data_dirs{d}{4};
+%    BUMP_RETURN_STABILITY_WINDOW = data_dirs{d}{5};
     
     cur_datapath = data_dirs{d}{1};
     cur_sid      = data_dirs{d}{2};
@@ -51,7 +51,7 @@ for d = 1:length( data_dirs )
     
     bump_data   = cur_data.bump_in_window;
     fwd_data    = cur_data.fwd_in_window;
-    yaw_data    = cur_data.yaw_in_window;
+    yaw_data    = convert_yaw_to_degrees( cur_data.yaw_in_window );
     ephys_data  = cur_data.ephys_in_window;
             
     t_bump_w   = ([0:size(bump_data,3)-1] / VPS) - BEFORE_STIM_TIME;
@@ -69,7 +69,7 @@ for d = 1:length( data_dirs )
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Collect an average of all trials post stim
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        
-    
+    bump_avg_per_stim = [];
     for st = 1:size( bump_data, 1 )
         
         [ smoothed_bump, cur_bump_tc, cur_bump_tc_unwrapped, vect_strength_check ] = get_radial_weighted_avg_bump_pos_vect_strengh_check_v2( squeeze( bump_data( st, :, : ) ) );
@@ -77,7 +77,7 @@ for d = 1:length( data_dirs )
         % Rotate bump data so that the average pre-stim period is in the same
         % place for each trial.
         BUMP_TC_FILTER_SAMPLE_POINTS = 5;
-        baseline_vals = cur_bump_tc( bump_baseline_idx );
+        baseline_vals = cur_bump_tc( bump_baseline );
         baseline_non_nan = baseline_vals(~isnan(baseline_vals));        
         bump_delta_tc = medfilt1( cur_bump_tc - mean(baseline_non_nan), BUMP_TC_FILTER_SAMPLE_POINTS, 'truncate' );
                 
@@ -85,18 +85,18 @@ for d = 1:length( data_dirs )
     end
 
     avg_bump = mean(bump_avg_per_stim);
-    bump_response(d) = mean( avg_bump( bump_stim_window ) ) - mean( avg_bump( bump_baseline ) );
+    bump_response( d ) = mean( avg_bump( bump_stim_window ) ) - mean( avg_bump( bump_baseline ) );
     
     avg_fwd = mean(fwd_data);
-    fwd_response(d) = mean( avg_fwd( yaw_stim_window ) ) - mean( avg_fwd( yaw_baseline ) );
+    fwd_response( d ) = mean( avg_fwd( yaw_stim_window ) ) - mean( avg_fwd( yaw_baseline ) );
 
     avg_yaw = mean(yaw_data);
-    yaw_response(d) = mean( avg_yaw( yaw_stim_window ) ) - mean( avg_yaw( yaw_baseline ) );
+    yaw_response( d ) = mean( avg_yaw( yaw_stim_window ) ) - mean( avg_yaw( yaw_baseline ) );
     
     ephys_spikes_removed = [];
     for st = 1:size( bump_data, 1 )
         FILT_FACTOR = 0.04;
-        cur_Vm_w_drift = medfilt1( cur_ephys, FILT_FACTOR * EPHYS_FR, 'truncate' );
+        cur_Vm_w_drift = medfilt1( squeeze(ephys_data(st,:)), FILT_FACTOR * EPHYS_FR, 'truncate' );
         cur_Vm = cur_Vm_w_drift - mean( cur_Vm_w_drift );
 
         ephys_spikes_removed(st,:) = cur_Vm;
