@@ -48,10 +48,10 @@ exp_directories = { { '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17', 0, 0.2, 0.
 % sid 0
 % datapath = '/data/drive2/sasha/190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04/';
 
-ctrl_directories = { { '181206_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_01', 0, 0.4, 1.0 }, ... 
-                     { '190208_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_02', 0, 0.4, 1.0 }, ... 
-                     { '190211_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_03', 1, 0.4, 1.0 }, ... 
-                     { '190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04', 0, 0.4, 1.0 } };
+ctrl_directories = { { '181206_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_01', 0, 0.4, 0.5 }, ... 
+                     { '190208_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_02', 0, 0.4, 0.5 }, ... 
+                     { '190211_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_03', 1, 0.4, 0.5 }, ... 
+                     { '190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04', 0, 0.4, 0.5 } };
 
 %%
 extract_key_variables( basedir, exp_directories );                 
@@ -126,12 +126,12 @@ display_CX_summary_bar_plots_all_flies_use_mean( bump_conditions, bump_condition
 %% Controls 1: Display percent of bump jumps
 experiment_type_str = 'experiment';
 cur_dirs = exp_directories;
-[exp_bump_jump_percent_per_fly] = calculate_percent_of_bump_jumps( basedir, cur_dirs, experiment_type_str );
+[exp_bump_jump_percent_per_fly] = calculate_percent_of_bump_jumps_v2( basedir, cur_dirs, experiment_type_str );
 
-%% Controls 1: Display percent of bump jumps
+% Controls 1: Display percent of bump jumps
 experiment_type_str = 'control';
 cur_dirs = ctrl_directories;
-[ctl_bump_jump_percent_per_fly] = calculate_percent_of_bump_jumps( basedir, cur_dirs, experiment_type_str );
+[ctl_bump_jump_percent_per_fly] = calculate_percent_of_bump_jumps_v2( basedir, cur_dirs, experiment_type_str );
 
 %% Controls 1: Display percent of bump jumps
 
@@ -169,7 +169,7 @@ end
 title('Percent jump');
 filename = [ '/data/drive2/sasha/CX_summary' ];
 saveas( f, [ filename '/percent_jump_summary.fig'] );
-saveas( f, [ filename '/percent_jump_summary.fig'] );
+saveas( f, [ filename '/percent_jump_summary.png'] );
 
 %% Controls 2: Display exp vs. control for post stim A2 response: examine the effect of ATP stimulation on A2
 experiment_type_str = 'experiment';
@@ -230,6 +230,11 @@ filename = [ '/data/drive2/sasha/CX_summary' ];
 saveas( f, [ filename '/post_stim_response_summary.fig'] );
 saveas( f, [ filename '/post_stim_response_summary.png'] );
 
+%% Test bump time courses
+
+experiment_type_str = 'control';
+cur_dirs = ctrl_directories;
+[ctl_bump_jump_percent_per_fly] = calculate_percent_of_bump_jumps_v2( basedir, cur_dirs, experiment_type_str );
 
 
 % ATTIC
