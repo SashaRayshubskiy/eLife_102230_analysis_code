@@ -1,4 +1,4 @@
-function [ bump_pos_win_all, bump_win_all, yaw_win_all, fwd_win_all, ephys_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys ] = align_by_bump_velocity_with_PSTH( basedir, directories, bump_conditions, bump_conditions_str )
+function [ bump_pos_win_all, bump_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, ephys_win_all ] = align_by_bump_velocity_with_PSTH( basedir, directories, bump_conditions, bump_conditions_str )
 
 settings = sensor_settings;
 BALL_FR = settings.sensorPollFreq;
@@ -33,11 +33,13 @@ bump_pos_win_all = cell( length(bump_conditions), length( directories ));
 bump_win_all   = cell( length(bump_conditions), length( directories ));
 yaw_win_all    = cell( length(bump_conditions), length( directories ));
 fwd_win_all    = cell( length(bump_conditions), length( directories ));
-ephys_win_all  = cell( length(bump_conditions), length( directories ));
+Vm_win_all     = cell( length(bump_conditions), length( directories ));
 PSTH_win_all   = cell( length(bump_conditions), length( directories ));
 timebase_bump  = cell( length(bump_conditions), length( directories ));
 timebase_yaw   = cell( length(bump_conditions), length( directories ));
 timebase_ephys = cell( length(bump_conditions), length( directories ));
+
+ephys_win_all          = cell( length(bump_conditions), length( directories ));
 
 for cond = 1:length(bump_conditions)
     cur_cond     = bump_conditions{cond};
@@ -97,12 +99,16 @@ for cond = 1:length(bump_conditions)
         bump_pos_win = [];
         yaw_win      = [];
         fwd_win      = [];
-        ephys_win    = [];
+        Vm_win       = [];
         PSTH_win     = [];
         t_bump_win   = [];
         t_yaw_win    = [];
-        t_ephys_win  = [];
-                
+        t_Vm_win     = [];
+        
+        ephys_win              = [];
+        bump_return_peak_t     = [];
+        t_peak     = t_bump_w;
+                        
         if( DEBUG_LEVEL == DEBUG_VERBOSE )
             aligned_data_fig = figure('units','normalized','outerposition',[0 0 1 1]);
         end
@@ -250,8 +256,8 @@ for cond = 1:length(bump_conditions)
 
                 % waitforbuttonpress;
                 linkaxes(ax1, 'x');
-                saveas(f, [t_now_analysis_path '/eb_bump_vel_peak_detect_' cur_cond_str '_stim_' num2str( s ) '.fig'] );
-                saveas(f, [t_now_analysis_path '/eb_bump_vel_peak_detect_' cur_cond_str '_stim_' num2str( s ) '.png'] );
+                saveas(f, [t_now_analysis_path '/eb_bump_vel_peak_t_detect_' cur_cond_str '_stim_' num2str( s ) '.fig'] );
+                saveas(f, [t_now_analysis_path '/eb_bump_vel_peak_t_detect_' cur_cond_str '_stim_' num2str( s ) '.png'] );
                 close(f);
             end
             
@@ -307,21 +313,21 @@ for cond = 1:length(bump_conditions)
             
             EPHYS_FRAMES_BEFORE_EB_VEL_CHANGE = floor( TIME_BEFORE_EB_VEL_CHANGE * EPHYS_FR );
             EPHYS_FRAMES_AFTER_EB_VEL_CHANGE  = floor( TIME_AFTER_EB_VEL_CHANGE * EPHYS_FR );
-            cur_ephys_win_start  = ephys_align_idx - EPHYS_FRAMES_BEFORE_EB_VEL_CHANGE;
-            cur_ephys_win_end    = ephys_align_idx + EPHYS_FRAMES_AFTER_EB_VEL_CHANGE;
+            cur_Vm_win_start  = ephys_align_idx - EPHYS_FRAMES_BEFORE_EB_VEL_CHANGE;
+            cur_Vm_win_end    = ephys_align_idx + EPHYS_FRAMES_AFTER_EB_VEL_CHANGE;
 
-            if( ( cur_ephys_win_start < 1) || ( cur_ephys_win_end > length( cur_ephys ) ) )
+            if( ( cur_Vm_win_start < 1) || ( cur_Vm_win_end > length( cur_ephys ) ) )
                 % skip this stimulus
-                disp(['Stim removed: out of bounds in alignment: range: { 1, ' num2str(length( cur_ephys )) ' }  cur stim: { ' num2str(cur_ephys_win_start) ' , ' num2str(cur_ephys_win_end) ' }']);
+                disp(['Stim removed: out of bounds in alignment: range: { 1, ' num2str(length( cur_ephys )) ' }  cur stim: { ' num2str(cur_Vm_win_start) ' , ' num2str(cur_Vm_win_end) ' }']);
                 continue;
             end
             
-%             if( cur_ephys_win_start < 1)
-%                 cur_ephys_win_start = 1;
+%             if( cur_Vm_win_start < 1)
+%                 cur_Vm_win_start = 1;
 %             end            
 %             
-%             if( cur_ephys_win_end > length( cur_ephys )  )
-%                 cur_ephys_win_end = length( cur_ephys );
+%             if( cur_Vm_win_end > length( cur_ephys )  )
+%                 cur_Vm_win_end = length( cur_ephys );
 %             end            
             
             % If we got this far, then the indicies are within range
@@ -342,14 +348,15 @@ for cond = 1:length(bump_conditions)
             fwd_win(end+1,:) = cur_fwd_win;            
             
             % Align ephys (Vm)
-            cur_ephys_win = cur_Vm( cur_ephys_win_start:cur_ephys_win_end );
-            ephys_win(end+1,:) = cur_ephys_win;
-            t_ephys_win = t_ephys_w( cur_ephys_win_start:cur_ephys_win_end ) - t_ephys_w(ephys_align_idx);
+            cur_Vm_win = cur_Vm( cur_Vm_win_start:cur_Vm_win_end );
+            Vm_win(end+1,:) = cur_Vm_win;
+            t_Vm_win = t_ephys_w( cur_Vm_win_start:cur_Vm_win_end ) - t_ephys_w(ephys_align_idx);
+            ephys_win(end+1, :) = cur_ephys( cur_Vm_win_start:cur_Vm_win_end );
 
             % Align ephys (FR)
             cur_PSTH_win = cur_PSTH( cur_yaw_win_start:cur_yaw_win_end );
             PSTH_win(end+1,:) = cur_PSTH_win;
-
+            
             if( DEBUG_LEVEL == DEBUG_VERBOSE )
                 figure(aligned_data_fig);
                 ax2(1) = subplot(6,1,1);
@@ -378,7 +385,7 @@ for cond = 1:length(bump_conditions)
                 
                 ax2(5) = subplot(6,1,5);
                 hold on;
-                plot( t_ephys_win, cur_ephys_win, '-' );
+                plot( t_Vm_win, cur_Vm_win, '-' );
                 ylabel('Vm (mV)');
                 
                 ax2(6) = subplot(6,1,6);
@@ -391,15 +398,16 @@ for cond = 1:length(bump_conditions)
             end
         end
         
-        bump_pos_win_all{ cond, d }  = bump_pos_win;
-        bump_win_all{ cond, d }      = bump_vel_win;
-        yaw_win_all{ cond, d }    = yaw_win;
-        fwd_win_all{ cond, d }    = fwd_win;
-        ephys_win_all{ cond, d }  = ephys_win;
-        PSTH_win_all{ cond, d }   = PSTH_win;
-        timebase_bump{ cond, d }  = t_bump_win;
-        timebase_yaw{ cond, d }   = t_yaw_win;
-        timebase_ephys{ cond, d } = t_ephys_win;
+        bump_pos_win_all{ cond, d }       = bump_pos_win;
+        bump_win_all{ cond, d }           = bump_vel_win;
+        yaw_win_all{ cond, d }            = yaw_win;
+        fwd_win_all{ cond, d }            = fwd_win;
+        Vm_win_all{ cond, d }             = Vm_win;
+        PSTH_win_all{ cond, d }           = PSTH_win;
+        timebase_bump{ cond, d }          = t_bump_win;
+        timebase_yaw{ cond, d }           = t_yaw_win;
+        timebase_ephys{ cond, d }         = t_Vm_win;
+        ephys_win_all{ cond, d }          = ephys_win;
         
         if( DEBUG_LEVEL == DEBUG_VERBOSE )
             
@@ -462,13 +470,13 @@ for cond = 1:length(bump_conditions)
             ax2(5) = subplot(6,1,5);
             hold on;
             
-            if( size(ephys_win, 1) == 1 )
-                avg_ephys = ephys_win;
+            if( size(Vm_win, 1) == 1 )
+                avg_ephys = Vm_win;
             else
-                avg_ephys = mean( ephys_win );
+                avg_ephys = mean( Vm_win );
             end                
             
-            plot( t_ephys_win, avg_ephys, '-', 'LineWidth', 2.0 );
+            plot( t_Vm_win, avg_ephys, '-', 'LineWidth', 2.0 );
             ylabel('Vm (mV)');
 
             ax2(6) = subplot(6,1,6);
@@ -496,7 +504,7 @@ end
 % bump_win_all   = cell( length(bump_conditions), length( directories ));
 % yaw_win_all    = cell( length(bump_conditions), length( directories ));
 % fwd_win_all    = cell( length(bump_conditions), length( directories ));
-% ephys_win_all  = cell( length(bump_conditions), length( directories ));
+% Vm_win_all  = cell( length(bump_conditions), length( directories ));
 % timebase_bump  = cell( length(bump_conditions), length( directories ));
 % timebase_yaw   = cell( length(bump_conditions), length( directories ));
 % timebase_ephys = cell( length(bump_conditions), length( directories ));

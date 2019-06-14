@@ -1,4 +1,4 @@
-function  [ smoothed_bump, bump_motion_ids, bump_motion_ids_unwrapped, vect_strength_check ] = get_radial_weighted_avg_bump_pos_vect_strengh_check_v2( bump_gloms, BUMP_QUALITY_THRESHOLD )
+function  [ smoothed_bump, bump_motion_ids, bump_motion_ids_unwrapped, bump_in_deg_unwrapped, vect_strength_check ] = get_radial_weighted_avg_bump_pos_vect_without_periodic_jumps( bump_gloms, BUMP_QUALITY_THRESHOLD )
 
 % assumes input { glomerulus, time }
 
@@ -34,6 +34,7 @@ bump_motion_ids = zeros(1,n_frames);
 
 tmp_bump_motion_ids_unwrapped = zeros(1,n_frames);
 bump_motion_ids_unwrapped     = zeros(1,n_frames);
+tmp_bump_motion_deg_unwrapped = zeros(1,n_frames);
 
 if( nargin == 2 )
     NO_BUMP_THRESHOLD = BUMP_QUALITY_THRESHOLD;
@@ -41,14 +42,19 @@ else
     NO_BUMP_THRESHOLD = 0.2;
 end
 
-
 BUMP_LOCATION_OFFSET = 1;
 
 stop_me = 0;
 
 vect_strength_check = [];
 
+prev_deg = -1;
+
 for ts = 1:n_frames
+    
+    if(ts == 85)
+        stop_me = stop_me + 1;
+    end
     
     cur_ts_df_f = squeeze( bump_gloms(:,ts));
     
@@ -94,6 +100,7 @@ for ts = 1:n_frames
     if( vect_strength < NO_BUMP_THRESHOLD )
         tmp_bump_motion_ids(ts) = NaN;
         tmp_bump_motion_ids_unwrapped(ts) = NaN;
+        cur_deg = prev_deg;
     else
 
         theta_deg = wrapTo360( rad2deg(atan2( PVA_ts_y, PVA_ts_x )));
@@ -102,11 +109,21 @@ for ts = 1:n_frames
         %bump_location = theta_deg;        
         tmp_bump_motion_ids(ts) = bump_location;
 
-        theta_deg_unwrapped = rad2deg(atan2( PVA_ts_y, PVA_ts_x ));
+        theta_deg_unwrapped = rad2deg(atan2( PVA_ts_y, PVA_ts_x ));                
         bump_location_unwrapped = ((theta_deg_unwrapped / WEDGE_INCREMENT_IN_DEG) / UPSAMPLE_FACTOR) + BUMP_LOCATION_OFFSET;
         tmp_bump_motion_ids_unwrapped(ts) = bump_location_unwrapped;
-
+        
+        if( prev_deg ~= -1 )
+            delta_deg = shortest_distance_in_deg( prev_deg, theta_deg_unwrapped );
+            cur_deg = cur_deg + delta_deg;
+        else
+            % This should be set once at the start
+            cur_deg = theta_deg_unwrapped;
+        end        
     end
+    
+    tmp_bump_motion_deg_unwrapped(ts) = cur_deg;
+    prev_deg = cur_deg;
 end
 
 % Check distribution of vector strengths
@@ -115,6 +132,7 @@ end
 
 bump_motion_ids           = tmp_bump_motion_ids;
 bump_motion_ids_unwrapped = tmp_bump_motion_ids_unwrapped;
+bump_in_deg_unwrapped     = tmp_bump_motion_deg_unwrapped;
 
 % Fix any reasonable discountinueties in bump motion
 if 0

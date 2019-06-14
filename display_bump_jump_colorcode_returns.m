@@ -1,4 +1,4 @@
-function [ bump_returns_up, bump_returns_down, no_bump_jump ] = filter_bump_returns_experiment_return_up_down_post_jump( basedir, exp_directories )
+function display_bump_jump_colorcode_returns( basedir, exp_directories )
 
 settings = sensor_settings;
 BALL_FR = settings.sensorPollFreq;
@@ -22,7 +22,7 @@ BUMP_RETURN_MAX_TIME_CUTOFF = 7.0; % seconds
 BUMP_RETURN_STABILITY_WINDOW = 0.5; % seconds CHANGED ON 4/12/2019
 % BUMP_RETURN_STABILITY_WINDOW = 2.5; % seconds
 
-BUMP_RETURN_ZONE = 0.75; % EPG wedge
+BUMP_RETURN_ZONE = 45; % EPG wedge
 
 BUMP_RETURN_STATE_OUTSIDE = 22;
 BUMP_RETURN_STATE_INSIDE = 23;
@@ -75,7 +75,7 @@ for d = 1:length( exp_directories )
     failed_bump_stability_check = [];
     passed_bump_stability_tc = [];
     
-    f = figure('units','normalized','outerposition',[0 0 1 1]);
+    % f = figure('units','normalized','outerposition',[0 0 1 1]);
     smothed_bump_all_stims = [];
     vect_strength_check_all = [];
     
@@ -101,22 +101,15 @@ for d = 1:length( exp_directories )
     vect_strength_check_all = [];
     for st = 1:size( bump_data, 1 )
         
-        % [ smoothed_bump, cur_bump_tc ] = get_radial_weighted_avg_bump_pos_v3( squeeze( bump_data( st, :, : ) ) );
-        % [ smoothed_bump, cur_bump_tc, vect_strength_check ] = get_radial_weighted_avg_bump_pos_vect_strengh_check( squeeze( bump_data( st, :, : ) ) );
-        
-%         if( st == 29 )
-%             debug_stop = debug_stop + 1;
-%             bump_debug = squeeze( bump_data( st, :, : ) ) ;
-%             save('/tmp/bump_debug.mat', 'bump_debug', 'bump_baseline_idx');
-%         end
-        
-        % Analyze bump statistics. 
-        
         cur_bump_data = squeeze( bump_data( st, :, : ) );
            
         all_bump_data = horzcat( all_bump_data, cur_bump_data );
         
-        [ smoothed_bump, cur_bump_tc, cur_bump_tc_unwrapped, vect_strength_check ] = get_radial_weighted_avg_bump_pos_vect_strengh_check_v2( cur_bump_data, BUMP_THREHOSLD_PERCENTILE );
+        if(st == 48)
+            stop_here = stop_here + 1;
+        end
+        
+        [ smoothed_bump, cur_bump_tc, cur_bump_tc_unwrapped, bump_in_deg_unwrapped, vect_strength_check ] = get_radial_weighted_avg_bump_pos_vect_without_periodic_jumps( cur_bump_data, BUMP_THREHOSLD_PERCENTILE );
         
         vect_strength_check_all = horzcat( vect_strength_check_all, vect_strength_check );
         
@@ -137,72 +130,102 @@ for d = 1:length( exp_directories )
         bump_delta_tc_uw = medfilt1( cur_bump_tc_unwrapped - mean(baseline_non_nan_uw), BUMP_TC_FILTER_SAMPLE_POINTS, 'truncate' );        
         pre_stim_bump_tc_uw = bump_delta_tc_uw( pre_stim_bump_t );
         
+        baseline_vals_deg_uw = bump_in_deg_unwrapped( bump_baseline_idx );
+        baseline_non_nan_deg_uw = baseline_vals_deg_uw(~isnan(baseline_vals_deg_uw));        
+        bump_delta_tc_deg_uw = medfilt1( bump_in_deg_unwrapped - mean(baseline_non_nan_deg_uw), 4, 'truncate' );        
+        % bump_delta_tc_deg_uw = bump_in_deg_unwrapped - mean(baseline_non_nan_deg_uw);
+                
         stop_here = 0;
         
         % Check that none of the values in the prestim period are NaNs, and that the bump was stable        
         if( ( sum( isnan( pre_stim_bump_tc_uw ) ) == 0 ) && ( std( pre_stim_bump_tc_uw ) < PRE_STIM_BUMP_STABILITY_THRESHOLD  ) )
             passed_bump_stability_check(end+1) = st;
-            passed_bump_stability_tc(end+1,:) = bump_delta_tc;
             
-            subplot(1,2,1);
-            hold on;
-            plot( t_bump_w, bump_delta_tc, 'DisplayName', ['stim: ' num2str(st)] );  
+            bump_delta_tc_deg_uw(isnan(cur_bump_tc)) = NaN;           
+            bump_delta_tc_deg_uw_fixed = bump_delta_tc_deg_uw;
+            bump_delta_tc_deg_uw_fixed = assess_and_fix_bump_quality( bump_delta_tc_deg_uw, VPS );
+         
+            if(length(bump_delta_tc_deg_uw_fixed) == 0 )
+                disp(['Trial: ' num2str(st) ' has been disqualified, too many time points with no clear bump.']);
+                continue;
+            end
+            
+if 0            
+            WRAP_ANGLE = 360-45;
+            
+            for jj = 1:length(bump_delta_tc_deg_uw_fixed)
+                
+                cur_bump_deg = bump_delta_tc_deg_uw_fixed(jj);
+                
+                if( cur_bump_deg >= WRAP_ANGLE )
+                    bump_delta_tc_deg_uw_fixed(jj) = bump_delta_tc_deg_uw_fixed(jj) - 360;
+                elseif( cur_bump_deg <= -1.0*WRAP_ANGLE )
+                    bump_delta_tc_deg_uw_fixed(jj) = bump_delta_tc_deg_uw_fixed(jj) + 360;                    
+                end
+            end
+end
+
+            passed_bump_stability_tc(end+1,:) =  bump_delta_tc_deg_uw_fixed;
+            
+            % subplot(1,2,1);
+            % hold on;
+            % plot( t_bump_w, bump_delta_tc, 'DisplayName', ['stim: ' num2str(st)] );  
             stop_here = stop_here + 1;
         else
             failed_bump_stability_check(end+1) = st;
-            subplot(1,2,2);
-            hold on;
-            plot( t_bump_w, bump_delta_tc, 'DisplayName', ['stim: ' num2str(st)] );
+            % subplot(1,2,2);
+            % hold on;
+            % plot( t_bump_w, bump_delta_tc, 'DisplayName', ['stim: ' num2str(st)] );
             stop_here = stop_here + 1;
         end
     end
     
-    DEBUG_BUMP_STATISTICS = 0;
-    if( DEBUG_BUMP_STATISTICS == 1 )
-        analyze_bump_statistics( all_bump_data );
-    end
-    
-    % Check distribution of bump values
-    DEBUG_BUMP_QUALITY = 1;
-    if( DEBUG_BUMP_QUALITY )
-        figure;
-        
-%         histogram( vect_strength_check_all, 50 );
-%         disp(['Avg bump strength vector: ' num2str( mean(vect_strength_check_all)) ]);
-%         disp(['Std bump strength vector: ' num2str( std(vect_strength_check_all)) ]);
+%     DEBUG_BUMP_STATISTICS = 0;
+%     if( DEBUG_BUMP_STATISTICS == 1 )
+%         analyze_bump_statistics( all_bump_data );
+%     end
+%     
+%     % Check distribution of bump values
+%     DEBUG_BUMP_QUALITY = 0;
+%     if( DEBUG_BUMP_QUALITY )
+%         figure;
 %         
-%         parmhat = evfit( vect_strength_check_all );
-%         parmhat
-
-        OUTLIER_LIMIT = 5.0;
-        vect_strength_check_all( find(vect_strength_check_all > OUTLIER_LIMIT ) ) = OUTLIER_LIMIT;
-        avg_vect = mean( vect_strength_check_all );
-        std_vect = std( vect_strength_check_all );
-        
-        BUMP_QUALITY_THRESHOLD = 0.2;
-        ip = invprctile(vect_strength_check_all,BUMP_QUALITY_THRESHOLD);
-        
-        PERCENTILE_CHECK = 7;
-        per = prctile(vect_strength_check_all,PERCENTILE_CHECK);
-                
-        disp(['Avg: ' num2str(avg_vect) ' Std: ' num2str(std_vect) ' Percentile (' num2str(PERCENTILE_CHECK) ') check: ' num2str(per) ]);
-        
-        figure(f);
-    end
+% %         histogram( vect_strength_check_all, 50 );
+% %         disp(['Avg bump strength vector: ' num2str( mean(vect_strength_check_all)) ]);
+% %         disp(['Std bump strength vector: ' num2str( std(vect_strength_check_all)) ]);
+% %         
+% %         parmhat = evfit( vect_strength_check_all );
+% %         parmhat
+% 
+%         OUTLIER_LIMIT = 5.0;
+%         vect_strength_check_all( find(vect_strength_check_all > OUTLIER_LIMIT ) ) = OUTLIER_LIMIT;
+%         avg_vect = mean( vect_strength_check_all );
+%         std_vect = std( vect_strength_check_all );
+%         
+%         BUMP_QUALITY_THRESHOLD = 0.2;
+%         ip = invprctile(vect_strength_check_all,BUMP_QUALITY_THRESHOLD);
+%         
+%         PERCENTILE_CHECK = 7;
+%         per = prctile(vect_strength_check_all,PERCENTILE_CHECK);
+%                 
+%         disp(['Avg: ' num2str(avg_vect) ' Std: ' num2str(std_vect) ' Percentile (' num2str(PERCENTILE_CHECK) ') check: ' num2str(per) ]);
+%         
+%         figure(f);
+%     end
     
-    
-    subplot(1,2,1)
-    title(['Passed bump stability check: ' num2str(length(passed_bump_stability_check))]);
-    xlabel('Time (s)');
-    ylabel('EB bump position');
-    
-    subplot(1,2,2)
-    title(['Failed bump stability check: ' num2str(length(failed_bump_stability_check))]);
-    xlabel('Time (s)');
-    ylabel('EB bump position');
-    
-    saveas(f, [analysis_path '/' cur_datapath '_post_stim_bump_stability_check.fig']);
-    saveas(f, [analysis_path '/' cur_datapath '_post_stim_bump_stability_check.png']);
+%     
+%     subplot(1,2,1)
+%     title(['Passed bump stability check: ' num2str(length(passed_bump_stability_check))]);
+%     xlabel('Time (s)');
+%     ylabel('EB bump position');
+%     
+%     subplot(1,2,2)
+%     title(['Failed bump stability check: ' num2str(length(failed_bump_stability_check))]);
+%     xlabel('Time (s)');
+%     ylabel('EB bump position');
+%     
+%     saveas(f, [analysis_path '/' cur_datapath '_post_stim_bump_stability_check.fig']);
+%     saveas(f, [analysis_path '/' cur_datapath '_post_stim_bump_stability_check.png']);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     
@@ -214,60 +237,33 @@ for d = 1:length( exp_directories )
     % 5. Bump jumped not return
     % 7. No bump jump 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
-    returned_up_tc = [];       
-    returned_up_ids = [];
-    
-    returned_down_tc = [];     
-    returned_down_ids = [];
-
-    not_returned_tc = [];   
-    not_returned_ids = [];
-    
-    no_response_tc = [];         
-    no_response_ids = [];
-
-    returned_up_time_idx = {};
-    returned_down_time_idx = {};
     
     BUMP_RETURN_STABILITY_WINDOW_IN_SAMPLES = floor(BUMP_RETURN_STABILITY_WINDOW * VPS);
     
     jump_lookahead_window = find( (t_bump_w < JUMP_LOOKAHEAD_WINDOW) & ( t_bump_w > 0 ));
     
-    f = figure('units','normalized','outerposition',[0 0 1 1]);
+    % f = figure('units','normalized','outerposition',[0 0 1 1]);
+    f = figure();
     debug_cnt = 1;
-    for st = 1:length( passed_bump_stability_check )
-        cur_stim = passed_bump_stability_check( st );
+    total_cnt = 0;
+    returned_cnt = 0;
+    for st = 1:size( passed_bump_stability_tc,1 )
+        
+        if( st == 49 )
+            continue;
+        end
         cur_bump_tc = passed_bump_stability_tc( st, : );          
-
-%         if( cur_stim == 12 )
-%             debug_cnt = debug_cnt + 1;
-%         end
         
         cur_mean_bump_jump = mean( cur_bump_tc( jump_lookahead_window ) );
-            
-       if( DEBUG_LEVEL == DEBUG_SHOW_BUMP_TC )
-           ff = figure;
-           hold on;
-           cur_bump_rois  = squeeze(bump_data( cur_stim, :, : ));
-           imagesc( t_bump_w, [1:size(cur_bump_rois,1)], cur_bump_rois );
-           colormap(flipud(gray));
-           axis tight;
-           ylim([0 9]);
-           caxis([-0.5 2]);
-           
-           tt = title( ['stim: ' num2str(st)  ] );
-           set(tt, 'Interpreter', 'none');
-                      
-           BUMP_OFFSET = 6.0;
-           plot( t_bump_w, cur_bump_tc + BUMP_OFFSET );
-           BUMP_OFFSET = 6.0;           
-           figure(f);
-       end
-        
+                    
         % Criteria for bump return: bump crosses the initial position of
         % 0 and stays there for at least some time
         if( abs(cur_mean_bump_jump) > JUMP_THRESHOLD )
             % Jump up or down
+            
+%             subplot(1,2,1);
+%             hold on;
+%             plot( t_bump_w, cur_bump_tc, 'DisplayName', ['stim: ' num2str(st)], 'color', 'b' );  
             
             % Evaluate if the bump returns or not, with maximum amount of
             % time
@@ -278,14 +274,19 @@ for d = 1:length( exp_directories )
             returned_time_idx = -1;
             
             % Determine the first crossing back to the home zone.
-            bump_home_return_crossings = find( abs(cur_bump_tc(bump_return_eval_period)) < BUMP_RETURN_ZONE );
-            if( length( bump_home_return_crossings ) == 0 )
+            bump_home_return_crossings_0 = find( abs(cur_bump_tc(bump_return_eval_period)) < BUMP_RETURN_ZONE );
+            
+            % 
+            bump_home_return_crossings_360 = find(( abs(cur_bump_tc(bump_return_eval_period)) < 360+BUMP_RETURN_ZONE ) & ( abs(cur_bump_tc(bump_return_eval_period)) > 360-BUMP_RETURN_ZONE) );
+            
+            % Check 0 
+            if( length( bump_home_return_crossings_0 ) == 0 ) 
                 bump_returns_flag = 0;
                 returned_time_idx = -1;
             else
                 % Check that the average bump position is within the home zone
                 % for a certain window after the initial crossing.
-                first_crossing_index = bump_home_return_crossings(1);
+                first_crossing_index = bump_home_return_crossings_0(1);
                 
                 if( (first_crossing_index+BUMP_RETURN_STABILITY_WINDOW_IN_SAMPLES) <= length(bump_return_eval_period) )
                     end_of_crossing_window = first_crossing_index + BUMP_RETURN_STABILITY_WINDOW_IN_SAMPLES;
@@ -305,80 +306,67 @@ for d = 1:length( exp_directories )
                     post_jump_non_nan = cur_bump_tc(bump_return_eval_period(~isnan(cur_bump_tc(bump_return_eval_period(1:end_of_crossing_window))))); 
                     bump_return_direction = mean(post_jump_non_nan) - cur_bump_tc(bump_return_eval_period(1));
                     
-%                     if( st == 51 )
-%                         debug_cnt = debug_cnt + 1;
-%                     end
-                    
                 else
                     % Failed to find a home crossing.
                     bump_returns_flag = 0;
                     returned_time_idx = -1;
                 end
             end
-            
-%             if( st == 51 )
-%                 debug_cnt = debug_cnt + 1;
-%             end
-             
-            if( ( abs(cur_mean_bump_jump) > JUMP_THRESHOLD ) && (bump_returns_flag == 1) && ( bump_return_direction > 0 ))
-                subplot(4,1,1);
-                hold on;
-                
-                returned_up_tc(end+1,:) = cur_bump_tc;       
-                returned_up_ids(end+1) = cur_stim; 
-                returned_up_time_idx{end+1} = [ jump_lookahead_window(end) : returned_time_idx ];
-            elseif( ( abs(cur_mean_bump_jump) > JUMP_THRESHOLD ) && (bump_returns_flag == 1) && ( bump_return_direction < 0 ))
-                subplot(4,1,2);
-                hold on;
-                
-                returned_down_tc(end+1,:) = cur_bump_tc;       
-                returned_down_ids(end+1) = cur_stim; 
-                returned_down_time_idx{end+1} = [ jump_lookahead_window(end) : returned_time_idx ];
 
-            elseif( ( abs(cur_mean_bump_jump) > JUMP_THRESHOLD ) && (bump_returns_flag == 0))
-                subplot(4,1,3);
-                hold on;
-                not_returned_tc(end+1,:) = cur_bump_tc;   
-                not_returned_ids(end+1) = cur_stim;            
+            % Check 360 
+            if(bump_returns_flag == 0)
+                if( length( bump_home_return_crossings_360 ) == 0 )
+                    bump_returns_flag = 0;
+                    returned_time_idx = -1;
+                else
+                    % Check that the average bump position is within the home zone
+                    % for a certain window after the initial crossing.
+                    first_crossing_index = bump_home_return_crossings_360(1);
+                    
+                    if( (first_crossing_index+BUMP_RETURN_STABILITY_WINDOW_IN_SAMPLES) <= length(bump_return_eval_period) )
+                        end_of_crossing_window = first_crossing_index + BUMP_RETURN_STABILITY_WINDOW_IN_SAMPLES;
+                    else
+                        end_of_crossing_window = length( bump_return_eval_period );
+                    end
+                    
+                    avg_bump_in_home_window = mean( abs(cur_bump_tc( bump_return_eval_period( first_crossing_index : end_of_crossing_window ))));
+                    
+                    if( ( avg_bump_in_home_window < (360 + BUMP_RETURN_ZONE) ) & ( avg_bump_in_home_window > (360 - BUMP_RETURN_ZONE) ) )
+                        bump_returns_flag = 1;
+                        returned_time_idx = bump_return_eval_period( end_of_crossing_window );
+                        
+                        % Classify the direction of bump return, as the
+                        % vector between the bump jump peak and the average
+                        % bump return path
+                        post_jump_non_nan = cur_bump_tc(bump_return_eval_period(~isnan(cur_bump_tc(bump_return_eval_period(1:end_of_crossing_window)))));
+                        bump_return_direction = mean(post_jump_non_nan) - cur_bump_tc(bump_return_eval_period(1));
+                        
+                    else
+                        % Failed to find a home crossing.
+                        bump_returns_flag = 0;
+                        returned_time_idx = -1;
+                    end
+                end
             end
-        else
-            % No response
-            subplot(4,1,4);
-            hold on;            
-            no_response_tc(end+1,:) = cur_bump_tc;                    
-            no_response_ids(end+1) = cur_stim;       
+            
+            subplot(1,1,1);
+            hold on;
+            if( bump_returns_flag ==  0)
+                plot( t_bump_w, cur_bump_tc, 'DisplayName', ['stim: ' num2str(st)], 'color', rgb('Silver') );  
+            else
+                plot( t_bump_w, cur_bump_tc, 'DisplayName', ['stim: ' num2str(st)], 'color', 'r' );    
+                returned_cnt = returned_cnt + 1;
+            end
+            total_cnt = total_cnt + 1;
         end
-        
-        plot( t_bump_w, cur_bump_tc, 'DisplayName', [ 'stim: ' num2str(st) ] );
     end
-    
-    subplot(4,1,1);
-    title(['returned up: ' num2str(length(returned_up_ids))]);
-    subplot(4,1,2);
-    title(['returned down: ' num2str(length(returned_down_ids))]);
-    subplot(4,1,3);
-    title(['not returned: ' num2str(length(not_returned_ids))]);
-    subplot(4,1,4);
-    title(['No response: ' num2str(length(no_response_ids))]);
-    
-    saveas(f, [analysis_path '/' cur_datapath '_bump_jump_classification.fig']);
-    saveas(f, [analysis_path '/' cur_datapath '_bump_jump_classification.png']);    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Return stims with succesful bump jump up/down with returns
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-    bump_returns_down{d,1} = returned_down_tc;
-    bump_returns_down{d,2} = returned_down_ids;
-    bump_returns_down{d,3} = returned_down_time_idx;
-    
-    bump_returns_up{d,1} = returned_up_tc;
-    bump_returns_up{d,2} = returned_up_ids;
-    bump_returns_up{d,3} = returned_up_time_idx;
-    
-    no_bump_jump{d,1} = no_response_tc;
-    no_bump_jump{d,2} = no_response_ids;
+        
+    xlim([-1 10]);
+    title(['Percent returned: ' num2str( 100.0*returned_cnt/total_cnt ) ' ( ' num2str( returned_cnt ) '/' num2str( total_cnt ) ' )']);
+    xlabel('Time from ATP stim (s)');
+    xlabel('Bump position (deg)');
+    saveas(f, [analysis_path '/' cur_datapath '_bump_jump_colorcoded_return.fig']);
+    saveas(f, [analysis_path '/' cur_datapath '_bump_jump_colorcoded_return.png']);
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
 end
 end

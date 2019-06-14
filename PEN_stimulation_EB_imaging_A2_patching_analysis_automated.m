@@ -84,44 +84,66 @@ if( ANALYSIS_TYPE == RUN_EXPERIMENT )
 elseif( ANALYSIS_TYPE == RUN_CONTROL )
     cur_dirs = ctrl_directories;
 elseif( ANALYSIS_TYPE == RUN_TEST )    
-%      cur_dirs = { { '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17', 0, 0.2, 0.5, 0.5, 0.5 } };
+     cur_dirs = { { '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17', 0, 0.2, 0.5, 0.5, 0.5 } };
 %      cur_dirs = { { '190131_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_19', 0, 0.15, 0.5, 0.5, 0.5 } };
 %      cur_dirs = { { '190204_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_22', 0, 0.15, 0.5, 0.5, 0.5 } };
-      cur_dirs = { { '190205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23', 1, 0.15, 0.25, 2.5, 0.1 } }; 
+%       cur_dirs = { { '190205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_23', 1, 0.15, 0.25, 2.5, 0.1 } }; 
 end
 
-%%
-[ bump_jumps_up_returns_down, bump_jumps_down_returns_up, no_response ] = filter_bump_returns_experiment_v3( basedir, cur_dirs );
-% bump_conditions = { bump_jumps_up_returns_down, bump_jumps_down_returns_up, no_response };
-% bump_conditions_str = { 'bump_jumps_up_returns_down', 'bum....p_jumps_down_returns_up', 'no_response' };
-%bump_conditions = { bump_jumps_down_returns_up, no_response };
-%bump_conditions_str = { 'bump_jumps_down_returns_up', 'no_response' };
-bump_conditions = { bump_jumps_down_returns_up, bump_jumps_up_returns_down };
-bump_conditions_str = { 'bump_jumps_down_returns_up', 'bump_jumps_up_returns_down' };
-
-[ bump_win_all, yaw_win_all, fwd_win_all, ephys_win_all, timebase_bump, timebase_yaw, timebase_ephys  ] = align_by_bump_velocity_v2( basedir, cur_dirs, bump_conditions, bump_conditions_str );
-
 %% Classify by bump returns up or down only 
-
 [ bump_returns_up, bump_returns_down, no_response ] = filter_bump_returns_experiment_return_up_down_post_jump( basedir, cur_dirs );
 
-% Classify by bump returns up or down only
+%% Classify by bump returns up or down only
 bump_conditions = { bump_returns_up, bump_returns_down };
 bump_conditions_str = { 'bump_returns_up', 'bump_returns_down' };
 
-% 
-[ bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, ephys_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys  ] = align_by_bump_velocity_with_PSTH( basedir, cur_dirs, bump_conditions, bump_conditions_str );
+[ bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, ephys_win_all ] = align_by_bump_velocity_with_PSTH( basedir, cur_dirs, bump_conditions, bump_conditions_str );
 
 %% 
 % display_CX_summary_all_flies( bump_conditions, bump_conditions_str, bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, ephys_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, experiment_type_str );
 
-display_CX_summary_all_flies_workaround_3( bump_conditions, bump_conditions_str, bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, ephys_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, experiment_type_str );
+display_CX_summary_all_flies_workaround_3( bump_conditions, bump_conditions_str, bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, experiment_type_str );
 
 %% Display summary bar plots
 % display_CX_summary_bar_plots_all_flies( bump_conditions, bump_conditions_str, bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, ephys_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, experiment_type_str );
 
-display_CX_summary_bar_plots_all_flies_use_mean( bump_conditions, bump_conditions_str, bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, ephys_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, experiment_type_str );
+display_CX_summary_bar_plots_all_flies_use_mean( bump_conditions, bump_conditions_str, bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, experiment_type_str );
 
+
+%% display spontaneous vs. CX-evoked turning scatter plot
+
+% Vm
+display_spontaneous_vs_cx_evoked_turning_scatter( basedir, cur_dirs, yaw_win_all, ephys_win_all, timebase_yaw, timebase_ephys );
+
+% FR
+display_spontaneous_vs_cx_evoked_turning_scatter_FR( basedir, cur_dirs, yaw_win_all, ephys_win_all, timebase_yaw, timebase_ephys );
+
+%% Breakout trials by jumps, and color code by weather the bump return or not
+display_bump_jump_colorcode_returns( basedir, cur_dirs );
+
+
+%% Calculate experiment statistics
+
+num_stims = [];
+
+for d = 1:length( cur_dirs )
+    
+    cur_datapath = cur_dirs{d}{1};
+    cur_sid      = cur_dirs{d}{2};
+    
+    datapath = [ basedir '/' cur_datapath ]; 
+    analysis_path = [datapath '/analysis/'];
+    stim_filepath = [analysis_path '/stim_window_data_sid_' num2str(cur_sid) '.mat'];
+    
+    cur_data = load( stim_filepath );    
+    bump_data   = cur_data.bump_in_window;
+
+    num_stims(d) = size( bump_data, 1);
+    disp(['Stims for fly: ' num2str(d) ' = ' num2str(num_stims(d))]);
+end
+
+disp(['Avg: ' num2str( mean( num_stims )) ]);
+disp(['SEM: ' num2str( get_sem( num_stims, 2 )) ]);
 
 %% Controls 1: Display percent of bump jumps
 experiment_type_str = 'experiment';
@@ -181,7 +203,7 @@ experiment_type_str = 'control';
 cur_dirs = ctrl_directories;
 [ ctl_bump_response, ctl_fwd_response, ctl_yaw_response, ctl_ephys_response ] = calculate_A2_post_stim_response( basedir, cur_dirs, experiment_type_str );
 
-%
+%%
 f = figure;
 SEM_DIM = 2;
 
@@ -211,19 +233,26 @@ for cond = [1 2]
     subplot( 1, 2, 1 );
     hold on;
     yaw_avg = mean( cur_yaw, SEM_DIM );
-    plot( [cond-0.25, cond+0.25], [ yaw_avg, yaw_avg ]  );
+    yaw_sem = get_sem( cur_ephys, SEM_DIM );
+    plot( [cond-0.25, cond+0.25], [ yaw_avg, yaw_avg ], 'DisplayName', [ 'avg: ' num2str( yaw_avg ) ' sem: ' num2str( yaw_sem ) ]  );
     ylim([-100 100]);
     ylabel('Yaw (deg/s)');    
-    set(gca, 'XTickLabel', {'0', 'Exp', 'Ctrl', '3'})
+    set(gca, 'XTickLabel', {'0', 'Exp', 'Ctrl', '3'})    
     
     subplot( 1, 2, 2 );
     hold on;
     ephys_avg = mean( cur_ephys, SEM_DIM );
-    plot( [cond-0.25, cond+0.25], [ ephys_avg, ephys_avg ] );  
+    ephys_sem = get_sem( cur_ephys, SEM_DIM );
+    plot( [cond-0.25, cond+0.25], [ ephys_avg, ephys_avg ], 'DisplayName', [ 'avg: ' num2str( ephys_avg ) ' sem: ' num2str( ephys_sem ) ] );  
     ylim([-2 2]);
     set(gca, 'XTickLabel', {'0', 'Exp', 'Ctrl', '3'})
-    ylabel('Vm (mv)');    
+    ylabel('Vm (mv)');        
 end
+
+subplot(1,2,1);
+legend;
+subplot(1,2,2);
+legend;
 
 title('Post ATP injection response');
 filename = [ '/data/drive2/sasha/CX_summary' ];
@@ -235,6 +264,8 @@ saveas( f, [ filename '/post_stim_response_summary.png'] );
 experiment_type_str = 'control';
 cur_dirs = ctrl_directories;
 [ctl_bump_jump_percent_per_fly] = calculate_percent_of_bump_jumps_v2( basedir, cur_dirs, experiment_type_str );
+
+
 
 
 % ATTIC
@@ -251,6 +282,14 @@ display_CX_summary_all_flies_experiment_vs_control( experiment_data, control_dat
 calculate_spontaneous_post_stim_bump_velocity( basedir, ctrl_directories );
 
 
+%%
+[ bump_jumps_up_returns_down, bump_jumps_down_returns_up, no_response ] = filter_bump_returns_experiment_v3( basedir, cur_dirs );
+% bump_conditions = { bump_jumps_up_returns_down, bump_jumps_down_returns_up, no_response };
+% bump_conditions_str = { 'bump_jumps_up_returns_down', 'bum....p_jumps_down_returns_up', 'no_response' };
+%bump_conditions = { bump_jumps_down_returns_up, no_response };
+%bump_conditions_str = { 'bump_jumps_down_returns_up', 'no_response' };
+bump_conditions = { bump_jumps_down_returns_up, bump_jumps_up_returns_down };
+bump_conditions_str = { 'bump_jumps_down_returns_up', 'bump_jumps_up_returns_down' };
 
-
+[ bump_win_all, yaw_win_all, fwd_win_all, ephys_win_all, timebase_bump, timebase_yaw, timebase_ephys  ] = align_by_bump_velocity_v2( basedir, cur_dirs, bump_conditions, bump_conditions_str );
 
