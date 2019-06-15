@@ -112,10 +112,10 @@ display_CX_summary_bar_plots_all_flies_use_mean( bump_conditions, bump_condition
 
 %% display spontaneous vs. CX-evoked turning scatter plot
 
-% Vm
+%% Vm
 display_spontaneous_vs_cx_evoked_turning_scatter( basedir, cur_dirs, yaw_win_all, ephys_win_all, timebase_yaw, timebase_ephys );
 
-% FR
+%%  FR
 display_spontaneous_vs_cx_evoked_turning_scatter_FR( basedir, cur_dirs, yaw_win_all, ephys_win_all, timebase_yaw, timebase_ephys );
 
 %% Breakout trials by jumps, and color code by weather the bump return or not

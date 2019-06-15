@@ -1,5 +1,7 @@
 function display_spontaneous_vs_cx_evoked_turning_scatter( basedir, cur_dirs, yaw_win_all, ephys_win_all, timebase_yaw, timebase_ephys )
 
+set(0, 'DefaultFigureRenderer', 'painters');
+
 FILT_FACTOR = 0.04;
 ac = get_analysis_constants;
 
@@ -10,7 +12,8 @@ BIN_SIZE = 0.050; % s
 DT_EPHYS = ephys_SR * BIN_SIZE;
 DT_YAW   = ball_SR * BIN_SIZE;
 
-CX_TURN_WINDOW_T = 0.4;
+PRE_PEAK_BUMP_RETURN_VEL = 0.5;
+POST_PEAK_BUMP_RETURN_VEL = 0.0;
 
 for d = 1:length( cur_dirs )
 % for d = 1
@@ -69,8 +72,8 @@ for d = 1:length( cur_dirs )
             
             % Assuming the data is aligned to bump return velocity.
             time_of_peak = 0.0;                       
-            CX_turn_start = time_of_peak - CX_TURN_WINDOW_T;
-            CX_turn_end   = time_of_peak + CX_TURN_WINDOW_T;                        
+            CX_turn_start = time_of_peak - PRE_PEAK_BUMP_RETURN_VEL;
+            CX_turn_end   = time_of_peak + POST_PEAK_BUMP_RETURN_VEL;                        
                         
             % Plot CX-evoked turning epoch            
             cur_t_down     = find( ( t_down >= CX_turn_start ) & ( t_down <= CX_turn_end ) );
@@ -91,8 +94,9 @@ for d = 1:length( cur_dirs )
     xlabel('A2 Vm (mV)');
     ylabel('Yaw (deg/s)');
 
-    saveas(f,[analysis_path '/Vm_vs_yaw_spontaneous_CX_turning_Vm.fig']);
-    saveas(f,[analysis_path '/Vm_vs_yaw_spontaneous_CX_turning_Vm.png']);
+    saveas(f,[analysis_path '/Vm_vs_yaw_spontaneous_CX_turning.fig']);
+    saveas(f,[analysis_path '/Vm_vs_yaw_spontaneous_CX_turning.png']);
+    saveas(f,[analysis_path '/Vm_vs_yaw_spontaneous_CX_turning.svg']);
     % close(f);
 end
 
