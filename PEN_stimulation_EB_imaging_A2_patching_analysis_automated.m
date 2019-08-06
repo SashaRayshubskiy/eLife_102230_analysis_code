@@ -1,5 +1,8 @@
 %% Load imaging and behavioral data
 
+set( 0, 'DefaultFigureRenderer', 'painters' );
+set( 0, 'DefaultAxesColor', 'none');
+
 clear all;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -93,11 +96,20 @@ end
 %% Classify by bump returns up or down only 
 [ bump_returns_up, bump_returns_down, no_response ] = filter_bump_returns_experiment_return_up_down_post_jump( basedir, cur_dirs );
 
-%% Classify by bump returns up or down only
+%% For panel comparing bump return vs. not return with color coded panel by yaw
+[ bump_returns_up, bump_returns_down, no_response, bump_tc_FF ] = filter_bump_returns_for_figure( basedir, cur_dirs );
+
+%% DO NOT TOUCH: Classify by bump returns up or down only
 bump_conditions = { bump_returns_up, bump_returns_down };
 bump_conditions_str = { 'bump_returns_up', 'bump_returns_down' };
 
 [ bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, ephys_win_all ] = align_by_bump_velocity_with_PSTH( basedir, cur_dirs, bump_conditions, bump_conditions_str );
+
+%% Experimenting for figure
+bump_conditions = { bump_returns_up, bump_returns_down };
+bump_conditions_str = { 'bump_returns_up', 'bump_returns_down' };
+
+[ bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, ephys_win_all, final_stims_passed_all_checks ] = align_by_bump_velocity_with_PSTH_for_figure( basedir, cur_dirs, bump_conditions, bump_conditions_str, bump_tc_FF );
 
 %% 
 % display_CX_summary_all_flies( bump_conditions, bump_conditions_str, bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, ephys_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, experiment_type_str );
@@ -119,7 +131,7 @@ display_spontaneous_vs_cx_evoked_turning_scatter( basedir, cur_dirs, yaw_win_all
 display_spontaneous_vs_cx_evoked_turning_scatter_FR( basedir, cur_dirs, yaw_win_all, ephys_win_all, timebase_yaw, timebase_ephys );
 
 %% Breakout trials by jumps, and color code by weather the bump return or not
-display_bump_jump_colorcode_returns( basedir, cur_dirs );
+display_bump_jump_colorcode_returns( basedir, cur_dirs, final_stims_passed_all_checks );
 
 
 %% Calculate experiment statistics
@@ -250,7 +262,7 @@ for cond = [1 2]
 end
 
 subplot(1,2,1);
-legend;
+legend;clos
 subplot(1,2,2);
 legend;
 

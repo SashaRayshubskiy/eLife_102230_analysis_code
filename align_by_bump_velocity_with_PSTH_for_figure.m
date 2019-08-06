@@ -1,4 +1,4 @@
-function [ bump_pos_win_all, bump_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, ephys_win_all ] = align_by_bump_velocity_with_PSTH( basedir, directories, bump_conditions, bump_conditions_str )
+function [ bump_pos_win_all, bump_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, ephys_win_all, final_stims_passed_all_checks ] = align_by_bump_velocity_with_PSTH_for_figure( basedir, directories, bump_conditions, bump_conditions_str, bump_tc_FF )
 
 set( 0, 'DefaultFigureRenderer', 'painters' );
 set( 0, 'DefaultAxesColor', 'none' );
@@ -27,24 +27,26 @@ DEBUG_LEVEL                      = DEBUG_VERBOSE;
 TIME_BEFORE_EB_VEL_CHANGE        = 2.5; % Used to be 1.0 s
 TIME_AFTER_EB_VEL_CHANGE         = 2.0;
 
-% BUMP_SPEED_THRESHOLD             = 0.5; % wedges/s CHANGED ON 4/12/2019
-BUMP_SPEED_THRESHOLD_MIN             = 0.1; % wedges/s
-BUMP_SPEED_THRESHOLD_MAX             = 20; % wedges/s
+% BUMP_SPEED_THRESHOLD           = 0.5; % wedges/s CHANGED ON 4/12/2019
+BUMP_SPEED_THRESHOLD_MIN         = 0.1; % wedges/s
+BUMP_SPEED_THRESHOLD_MAX         = 20; % wedges/s
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-bump_pos_win_all = cell( length(bump_conditions), length( directories ));
-bump_win_all   = cell( length(bump_conditions), length( directories ));
-yaw_win_all    = cell( length(bump_conditions), length( directories ));
-fwd_win_all    = cell( length(bump_conditions), length( directories ));
-Vm_win_all     = cell( length(bump_conditions), length( directories ));
-PSTH_win_all   = cell( length(bump_conditions), length( directories ));
-timebase_bump  = cell( length(bump_conditions), length( directories ));
-timebase_yaw   = cell( length(bump_conditions), length( directories ));
-timebase_ephys = cell( length(bump_conditions), length( directories ));
+bump_pos_win_all              = cell( length(bump_conditions), length( directories ));
+bump_win_all                  = cell( length(bump_conditions), length( directories ));
+yaw_win_all                   = cell( length(bump_conditions), length( directories ));
+fwd_win_all                   = cell( length(bump_conditions), length( directories ));
+Vm_win_all                    = cell( length(bump_conditions), length( directories ));
+PSTH_win_all                  = cell( length(bump_conditions), length( directories ));
+timebase_bump                 = cell( length(bump_conditions), length( directories ));
+timebase_yaw                  = cell( length(bump_conditions), length( directories ));
+timebase_ephys                = cell( length(bump_conditions), length( directories ));
+final_stims_passed_all_checks = cell( length(bump_conditions), length( directories ));
 
 ephys_win_all          = cell( length(bump_conditions), length( directories ));
 
-bump_and_yaw_fig = figure;
+bump_and_yaw_fig                       = figure;
+bump_trial_to_trial_colored_by_yaw_fig = figure;
 
 % for cond = 1
 for cond = 1:length(bump_conditions)
@@ -79,8 +81,10 @@ for cond = 1:length(bump_conditions)
         t_now_analysis_path = [datapath '/analysis/' datestr(t_now)];
         mkdir(t_now_analysis_path);
         
-        cur_cond_bump_tc  = cur_cond{d,1};
-        cur_cond_stim_ids = cur_cond{d,2};
+        cur_cond_bump_tc     = cur_cond{ d, 1 };
+        cur_cond_stim_ids    = cur_cond{ d, 2 };
+        cur_cond_bump_tc_FF  = bump_tc_FF{cond};
+        
               
         if( ( BUMP_CONDITION == BUMP_CONDITION_RETURNED_UP ) || ( BUMP_CONDITION == BUMP_CONDITION_RETURNED_DOWN ) )
             cur_cond_bump_return_idx = cur_cond{d,3};
@@ -121,20 +125,26 @@ for cond = 1:length(bump_conditions)
         
         kk = 0;
         ccc = 0;
+        stims_passed_all_checks = [];
+        
         for s = 1:size(cur_cond_bump_tc,1)
             
             % Calculate bump velocity
             cur_bump_tmp = cur_cond_bump_tc(s,:);
+
+            cur_bump_tmp_FF = cur_cond_bump_tc_FF(s,:);
             
             % if bump is a nan for large enough consequitive time points,
             % than disqualify.
-            [ cur_bump ] = assess_and_fix_bump_quality( cur_bump_tmp, VPS );
+            [ cur_bump ] = assess_and_fix_bump_quality( cur_bump_tmp, VPS );                       
             
             if(length(cur_bump) == 0 )
                 disp(['Trial: ' num2str(s) ' has been disqualified, too many time points with no clear bump.']);
                 continue;
             end
-
+            
+            [ cur_bump_FF ] = assess_and_fix_bump_quality( cur_bump_tmp_FF, VPS );
+            
             if( ( BUMP_CONDITION == BUMP_CONDITION_RETURNED_UP ) || ( BUMP_CONDITION == BUMP_CONDITION_RETURNED_DOWN ) )
                 cur_bump_return_idx_range = cur_cond_bump_return_idx{ s };
                 
@@ -339,12 +349,18 @@ for cond = 1:length(bump_conditions)
             
             % If we got this far, then the indicies are within range
             cur_bump_win = cur_bump( cur_EB_bump_vel_win_start:cur_EB_bump_vel_win_end );
+            cur_bump_pre_win = cur_bump( 1:cur_EB_bump_vel_win_start ); 
+            
+            cur_bump_win_FF = cur_bump_FF( cur_EB_bump_vel_win_start:cur_EB_bump_vel_win_end );
+            cur_bump_pre_win_FF = cur_bump_FF( 1:cur_EB_bump_vel_win_start );             
+            
             bump_pos_win(end+1,:) = cur_bump_win;            
             
             cur_EB_vel_win = bump_vel_all( cur_EB_bump_vel_win_start:cur_EB_bump_vel_win_end );
             bump_vel_win(end+1,:) = cur_EB_vel_win;
             t_bump_win = t_bump_w( cur_EB_bump_vel_win_start:cur_EB_bump_vel_win_end ) - EB_bump_vel_align;
-
+            t_bump_pre_win = t_bump_w( 1:cur_EB_bump_vel_win_start ) - EB_bump_vel_align;
+            
             % Align yaw
             cur_yaw_win = cur_yaw( cur_yaw_win_start:cur_yaw_win_end );
             yaw_win(end+1,:) = cur_yaw_win;
@@ -363,6 +379,8 @@ for cond = 1:length(bump_conditions)
             % Align ephys (FR)
             cur_PSTH_win = cur_PSTH( cur_yaw_win_start:cur_yaw_win_end );
             PSTH_win(end+1,:) = cur_PSTH_win;
+            
+            stims_passed_all_checks(end+1) = s;
             
             if( DEBUG_LEVEL == DEBUG_VERBOSE )
                 figure(aligned_data_fig);
@@ -415,7 +433,37 @@ for cond = 1:length(bump_conditions)
                 set(gca, 'TickDir', 'Out');
                 xlabel('Time (s)');
                 ylabel('vyaw (deg/s)');
+
                 
+                %%%%%%%%%
+                figure( bump_trial_to_trial_colored_by_yaw_fig );
+
+                pre_bump_max_vel_win_t = find( (t_yaw_win <= 0) & (t_yaw_win > -0.5 ) );
+                
+                avg_yaw = mean( cur_yaw_win( pre_bump_max_vel_win_t ) );
+                
+                cur_clr = 'none';
+                if( avg_yaw > 0 ) cur_clr = 'b'; else cur_clr = 'g'; end
+                                    
+                subplot( 2, 1, 1 );
+                hold on;
+                plot( t_bump_win, cur_bump_win_FF, 'color', cur_clr );
+                plot( t_bump_pre_win, cur_bump_pre_win_FF, 'color', cur_clr );
+                set(gca, 'TickDir', 'Out');
+                ylabel('EB bump position (wed)');
+                
+                subplot( 2, 1, 2 );
+                hold on;        
+                plot( t_bump_w, cur_bump_FF, 'color', cur_clr );
+                set(gca, 'TickDir', 'Out');
+                ylabel('EB bump position (wed)');
+                
+%                 yyaxis right;
+%                 plot( t_yaw_win, cur_yaw_win, '-r' );
+%                 set(gca, 'TickDir', 'Out');
+%                 xlabel('Time (s)');
+%                 ylabel('vyaw (deg/s)');
+                               
             end
         end
         
@@ -429,6 +477,7 @@ for cond = 1:length(bump_conditions)
         timebase_yaw{ cond, d }           = t_yaw_win;
         timebase_ephys{ cond, d }         = t_Vm_win;
         ephys_win_all{ cond, d }          = ephys_win;
+        final_stims_passed_all_checks{ cond, d } = stims_passed_all_checks;
         
         if( DEBUG_LEVEL == DEBUG_VERBOSE )
             
@@ -537,13 +586,20 @@ for cond = 1:length(bump_conditions)
             xlim([-1.0 1.0]);
             
             title(['Number of trials: ' num2str(size(yaw_win,1)) ]);
+                        
             saveas( bump_and_yaw_fig, [analysis_path '/bump_vel_vs_yaw_trial_by_trial_for_CX_figure.fig'] );
             saveas( bump_and_yaw_fig, [analysis_path '/bump_vel_vs_yaw_trial_by_trial_for_CX_figure.png'] );
             saveas( bump_and_yaw_fig, [analysis_path '/bump_vel_vs_yaw_trial_by_trial_for_CX_figure.svg'] );
         end
     end    
 end
-% 
+
+saveas(bump_trial_to_trial_colored_by_yaw_fig, [analysis_path 'bump_vel_colorcoded_by_yaw.fig']);
+saveas(bump_trial_to_trial_colored_by_yaw_fig, [analysis_path 'bump_vel_colorcoded_by_yaw.png']);
+saveas(bump_trial_to_trial_colored_by_yaw_fig, [analysis_path 'bump_vel_colorcoded_by_yaw.svg']);
+
+
+%
 % bump_win_all   = cell( length(bump_conditions), length( directories ));
 % yaw_win_all    = cell( length(bump_conditions), length( directories ));
 % fwd_win_all    = cell( length(bump_conditions), length( directories ));

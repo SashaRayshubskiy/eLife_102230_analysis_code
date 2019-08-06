@@ -1,4 +1,6 @@
-function display_bump_jump_colorcode_returns( basedir, exp_directories )
+function display_bump_jump_colorcode_returns( basedir, exp_directories, final_stims_passed_all_checks )
+
+
 
 settings = sensor_settings;
 BALL_FR = settings.sensorPollFreq;
@@ -37,7 +39,7 @@ DEBUG_LEVEL = DEBUG_OFF;
 bump_jumps_up_returns_down = cell( length( exp_directories ), 3 );
 bump_jumps_down_returns_up = cell( length( exp_directories ), 3 );
 no_bump_jump = cell( length( exp_directories ), 2 );
-    
+
 for d = 1:length( exp_directories )
     
     JUMP_THRESHOLD               = exp_directories{d}{4};
@@ -247,6 +249,9 @@ end
     debug_cnt = 1;
     total_cnt = 0;
     returned_cnt = 0;
+    return_type_1_idx = 0;
+    return_type_2_idx = 0;
+    
     for st = 1:size( passed_bump_stability_tc,1 )
         
         if( st == 49 )
@@ -349,24 +354,43 @@ end
                 end
             end
             
+            return_type = -1;            
             subplot(1,1,1);
             hold on;
             if( bump_returns_flag ==  0)
-                plot( t_bump_w, cur_bump_tc, 'DisplayName', ['stim: ' num2str(st)], 'color', rgb('Silver') );  
+                plot( t_bump_w, cur_bump_tc, 'DisplayName', [ 'stim: ' num2str( st ) ], 'color', rgb('Silver') );  
             else
-                plot( t_bump_w, cur_bump_tc, 'DisplayName', ['stim: ' num2str(st)], 'color', 'r' );    
-                returned_cnt = returned_cnt + 1;
+                
+                if( bump_return_direction > 0 )
+                    return_type = 1;
+                    return_type_1_idx = return_type_1_idx + 1;                    
+                    cur_return_type_idx = return_type_1_idx;
+                    disp('Got to return type 1');
+                elseif( bump_return_direction < 0 )
+                    return_type = 2;
+                    return_type_2_idx = return_type_2_idx + 1;                                        
+                    cur_return_type_idx = return_type_2_idx;
+                    disp('Got to return type 2');
+                end
+                
+                if( ismember( cur_return_type_idx, final_stims_passed_all_checks{ return_type } ) )                
+                    plot( t_bump_w, cur_bump_tc, 'DisplayName', [ 'stim: ' num2str( st ) ], 'color', 'r' );    
+                    returned_cnt = returned_cnt + 1;
+                end
             end
             total_cnt = total_cnt + 1;
         end
     end
         
     xlim([-1 10]);
-    title(['Percent returned: ' num2str( 100.0*returned_cnt/total_cnt ) ' ( ' num2str( returned_cnt ) '/' num2str( total_cnt ) ' )']);
+    % title(['Percent returned: ' num2str( 100.0*returned_cnt/total_cnt ) ' ( ' num2str( returned_cnt ) '/' num2str( total_cnt ) ' )']);
+    title(['Returned count: ' num2str( returned_cnt ) ]);
     xlabel('Time from ATP stim (s)');
     xlabel('Bump position (deg)');
+    set( gca(), 'TickDir', 'Out' );
     saveas(f, [analysis_path '/' cur_datapath '_bump_jump_colorcoded_return.fig']);
     saveas(f, [analysis_path '/' cur_datapath '_bump_jump_colorcoded_return.png']);
+    saveas(f, [analysis_path '/' cur_datapath '_bump_jump_colorcoded_return.svg']);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
 end
 end

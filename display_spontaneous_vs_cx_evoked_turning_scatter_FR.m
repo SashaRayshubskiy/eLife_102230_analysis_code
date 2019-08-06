@@ -36,10 +36,16 @@ end
 
 analysis_path = [basedir '/CX_summary/'];
 
+CX_turn_yaw_per_trial = cell(1, num_flies);
+CX_turn_FR_per_trial  = cell(1, num_flies);
+
 for d = 1:num_flies
 
     cur_datapath = cur_dirs{ d }{ 1 };
     cur_sid      = cur_dirs{ d }{ 2 };
+    
+    CX_turn_yaw_per_trial{ d } = [];
+    CX_turn_FR_per_trial{ d }  = [];
     
     % datapath = [ basedir '/' cur_datapath ];
     % analysis_path = [datapath '/analysis/'];
@@ -73,7 +79,7 @@ for d = 1:num_flies
         for tr = 1 : size( cur_yaw_all, 1 )
             
             cur_ephys = squeeze( cur_ephys_all( tr, : ) );
-            cur_yaw   = convert_yaw_to_degrees( squeeze( cur_yaw_all( tr, : ) ) );
+            cur_yaw   = -1.0*convert_yaw_to_degrees( squeeze( cur_yaw_all( tr, : ) ) );
             
             % cur_PSTH = calculate_PSTH_for_LAL_DN( cur_ephys_t, cur_yaw_t, cur_ephys, 'A2' );
             cur_PSTH = calculate_psth_debug( cur_ephys_t, cur_yaw_t, cur_ephys, ephys_SR, FR_THRESHOLD, psth_dt_samples, 0 );
@@ -102,11 +108,11 @@ for d = 1:num_flies
                 spontaneous_turning{ d, FR_DATA_IDX } = horzcat( spontaneous_turning{ d, FR_DATA_IDX }, A2_PSTH_down( cur_SPON_turning_t-SHIFT_FACTOR ) );
             end
             
-            for ii = 1:( length(cur_SPON_turning_t ) - SHIFT_FACTOR )
-                cur_index_yaw   = cur_SPON_turning_t( ii );
-                cur_yaw_1 = yaw_down( cur_index_yaw + SHIFT_FACTOR );
-                plot( A2_PSTH_down(ii), cur_yaw_1, 'o', 'MarkerSize', 3, 'color', 'b' );
-            end
+%             for ii = 1:( length(cur_SPON_turning_t ) - SHIFT_FACTOR )
+%                 cur_index_yaw   = cur_SPON_turning_t( ii );
+%                 cur_yaw_1 = yaw_down( cur_index_yaw + SHIFT_FACTOR );
+%                 plot( A2_PSTH_down(ii), cur_yaw_1, 'o', 'MarkerSize', 3, 'color', rgb('DarkGray') );
+%             end
                                     
             % Plot CX-evoked turning epoch            
             cur_CX_turning_t = find( ( yaw_t_down >= CX_turn_start ) & ( yaw_t_down <= CX_turn_end ) );
@@ -118,20 +124,27 @@ for d = 1:num_flies
                 CX_turning{ d, YAW_DATA_IDX } = horzcat( CX_turning{ d, YAW_DATA_IDX }, yaw_down( cur_CX_turning_t ) );
                 CX_turning{ d, FR_DATA_IDX }  = horzcat( CX_turning{ d, FR_DATA_IDX }, A2_PSTH_down( cur_CX_turning_t-SHIFT_FACTOR ) );
             end
+            
+            % if( cond == 1 )
+                CX_turn_yaw_per_trial{d}( end+1 ) = mean(yaw_down( cur_CX_turning_t ));
+                CX_turn_FR_per_trial{d}( end+1 )  = mean(A2_PSTH_down( cur_CX_turning_t-SHIFT_FACTOR ));
+            % end
                                     
-            for ii = 1: ( length( cur_CX_turning_t ) - SHIFT_FACTOR )
-                cur_index_yaw   = cur_CX_turning_t( ii );
-                cur_yaw_2 = yaw_down( cur_index_yaw +SHIFT_FACTOR );
-                plot( A2_PSTH_down( cur_index_yaw ), cur_yaw_2, 'o', 'MarkerSize', 10, 'color', 'r' );
-            end
+%             for ii = 1: ( length( cur_CX_turning_t ) - SHIFT_FACTOR )
+%                 cur_index_yaw   = cur_CX_turning_t( ii );
+%                 cur_yaw_2 = yaw_down( cur_index_yaw +SHIFT_FACTOR );
+%                 plot( A2_PSTH_down( cur_index_yaw ), cur_yaw_2, 'o', 'MarkerSize', 5, 'color', 'r' );
+%             end
         end
     end
     
+    plot( spontaneous_turning{ d, FR_DATA_IDX }, spontaneous_turning{ d, YAW_DATA_IDX }, 'o', 'MarkerSize', 3, 'color', rgb('DarkGray') );
+    plot( CX_turning{ d, FR_DATA_IDX }, CX_turning{ d, YAW_DATA_IDX }, 'o', 'MarkerSize', 5, 'color', 'r' );
     
     [ spont_FO, G ] = fit( spontaneous_turning{ d, FR_DATA_IDX }', spontaneous_turning{ d, YAW_DATA_IDX }', 'poly1' );
     spon_rsq = G.rsquare;
     plt1 = plot( spont_FO );    
-    set(plt1, 'Color', 'b');
+    set(plt1, 'Color', rgb('DarkGray'));
     set(plt1, 'DisplayName', [ 'spontaneous rsq: ' num2str( spon_rsq ) ' slope: ' num2str( spont_FO.p1 ) ]);
     slopes_spon( d ) = spont_FO.p1;
     rsq_spon( d )    = spon_rsq;
@@ -154,13 +167,50 @@ for d = 1:num_flies
     xlabel('Firing rate ( spikes/s )');
     ylabel('Yaw (deg/s)');
     set(gca, 'FontSize', 14);
+    xlim([0 150]);
     
     legend();
+    set(gca,'TickDir','out');    
     
     saveas(f,[analysis_path '/' cur_datapath '_FR_vs_yaw_spontaneous_CX_turning.fig']);
     saveas(f,[analysis_path '/' cur_datapath '_FR_vs_yaw_spontaneous_CX_turning.png']);
     saveas(f,[analysis_path '/' cur_datapath '_FR_vs_yaw_spontaneous_CX_turning.svg']);
-    % close(f);
+    
+    f = figure;
+    hold on;
+    % [ spont_FO, G ] = fit( spontaneous_turning{ d, FR_DATA_IDX }', spontaneous_turning{ d, YAW_DATA_IDX }', 'poly1' );
+    plot( CX_turn_FR_per_trial{ d }, CX_turn_yaw_per_trial{ d }, 'o', 'MarkerSize', 4, 'color', 'r' );
+    plt1 = plot( spont_FO ); 
+    set( plt1, 'Color', rgb('DarkGray') );
+    
+    % [ CX_FO, G ] = fit( CX_turn_FR_per_trial{d}', CX_turn_yaw_per_trial{d}', 'poly1' );
+    % CX_rsq = G.rsquare;
+    % plt1 = plot( CX_FO );    
+    % set(plt1, 'Color', 'r');
+    
+    mdl = fitlm( CX_turn_FR_per_trial{d}', CX_turn_yaw_per_trial{d}');
+    stim_rsq      = mdl.Rsquared.Ordinary;
+    stim_p_val    = mdl.Coefficients.pValue( 2 );
+
+    title( ['stim_rsq: ' num2str( stim_rsq ) ' stim_p_val: ' num2str( stim_p_val ) ] );
+    xlabel('Firing rate (spikes/s)');
+    ylabel('Yaw velocity (deg/s)');    
+    set(gca,'TickDir','out');    
+    
+    saveas(f,[analysis_path '/' cur_datapath '_FR_vs_yaw_spontaneous_CX_turning_trial_to_trial.fig']);
+    saveas(f,[analysis_path '/' cur_datapath '_FR_vs_yaw_spontaneous_CX_turning_trial_to_trial.png']);
+    saveas(f,[analysis_path '/' cur_datapath '_FR_vs_yaw_spontaneous_CX_turning_trial_to_trial.svg']);
+    
+    % Save data for bootstrap analysis 
+    ephys_non_stim_toplot = spontaneous_turning{ d, FR_DATA_IDX }; 
+    yaw_non_stim_toplot   = spontaneous_turning{ d, YAW_DATA_IDX };
+    ephys_stim_toplot     = CX_turning{ d, FR_DATA_IDX };
+    yaw_stim_toplot       = CX_turning{ d, YAW_DATA_IDX };
+    
+    savebasepath = '/data/drive2/sasha/CX_summary/spon_vs_evoked/';
+    savefilename = [ savebasepath 'CX_' num2str(d) '.mat' ];
+    save( savefilename, 'yaw_stim_toplot', 'ephys_stim_toplot', 'yaw_non_stim_toplot', 'ephys_non_stim_toplot' );
+
 end
 
 f = figure;
@@ -184,6 +234,7 @@ set(gca, 'XTick', [1 2]);
 set(gca, 'XTickLabel', {'Spontaneous', 'Central Complex'});
 xtickangle( 45 );
 legend();
+set(gca,'TickDir','out');    
 
 subplot(1,2,2);
 hold on;
@@ -205,6 +256,7 @@ set(gca, 'XTick', [1 2]);
 set(gca, 'XTickLabel', {'Spontaneous', 'Central Complex'});
 xtickangle( 45 );
 legend();
+set(gca,'TickDir','out');    
 
 saveas( f, [ analysis_path '/FR_vs_yaw_spontaneous_CX_turning_slope_rsq_per_fly.fig' ] );
 saveas( f, [ analysis_path '/FR_vs_yaw_spontaneous_CX_turning_slope_rsq_per_fly.png' ] );
@@ -232,6 +284,7 @@ for d = 1:num_flies
     plot( CX_FR_base(d,:), CX_mean(d,:), '--', 'color', rgb('Red') );    
 end
 
+set(gca,'TickDir','out');    
 xlabel('firing rate (spikes/s)');
 ylabel('yaw velocity (deg/s)');
 legend([plt1, plt2], 'Spontaneous','Central Complex');
@@ -239,6 +292,33 @@ legend([plt1, plt2], 'Spontaneous','Central Complex');
 saveas( f, [ analysis_path '/FR_vs_yaw_spontaneous_CX_turning_95ci.fig' ] );
 saveas( f, [ analysis_path '/FR_vs_yaw_spontaneous_CX_turning_95ci.png' ] );
 saveas( f, [ analysis_path '/FR_vs_yaw_spontaneous_CX_turning_95ci.svg' ] );
+
+f = figure;
+for d = 1:length(CX_turn_yaw_per_trial)
+    subplot(2,2,d);
+    hold on;
+    plot( CX_turn_FR_per_trial{d}, CX_turn_yaw_per_trial{d}, 'o', 'MarkerSize', 4 );
+
+    [ CX_FO, G ] = fit( CX_turn_FR_per_trial{d}', CX_turn_yaw_per_trial{d}', 'poly1' );
+    CX_rsq = G.rsquare;
+    plt1 = plot( CX_FO );    
+    set(plt1, 'Color', 'r');
+    set(plt1, 'DisplayName', [ 'CX rsq: ' num2str( CX_rsq ) ' slope: ' num2str( CX_FO.p1 ) ]);
+    legend();
+    xlabel('Firing rate (spikes/s)');
+    ylabel('Yaw vel (deg/s)');
+    
+    set(gca,'TickDir','out');    
+    
+    [rho, pval] = corr( CX_turn_FR_per_trial{d}', CX_turn_yaw_per_trial{d}' );
+    title(['Fly ' num2str(d) ': pearson corr: ' num2str(rho) ' p-val (two-tailed): ' num2str(pval) ]);
+end
+
+saveas( f, [ analysis_path '/FR_vs_yaw_trial_to_trial_corr_summary.fig' ] );
+saveas( f, [ analysis_path '/FR_vs_yaw_trial_to_trial_corr_summary.png' ] );
+saveas( f, [ analysis_path '/FR_vs_yaw_trial_to_trial_corr_summary.svg' ] );
+
+
 
 end
 

@@ -1,4 +1,4 @@
-function [ bump_returns_up, bump_returns_down, no_bump_jump ] = filter_bump_returns_experiment_return_up_down_post_jump( basedir, exp_directories )
+function [ bump_returns_up, bump_returns_down, no_bump_jump, bump_tc_FF ] = filter_bump_returns_for_figure( basedir, exp_directories )
 
 settings = sensor_settings;
 BALL_FR = settings.sensorPollFreq;
@@ -38,6 +38,10 @@ bump_jumps_up_returns_down = cell( length( exp_directories ), 3 );
 bump_jumps_down_returns_up = cell( length( exp_directories ), 3 );
 no_bump_jump = cell( length( exp_directories ), 2 );
     
+bump_tc_FF = cell(1,2);
+returned_up_tc_FF = [];       
+returned_down_tc_FF = [];       
+
 for d = 1:length( exp_directories )
     
     JUMP_THRESHOLD               = exp_directories{d}{4};
@@ -74,6 +78,7 @@ for d = 1:length( exp_directories )
     passed_bump_stability_check = [];
     failed_bump_stability_check = [];
     passed_bump_stability_tc = [];
+    passed_bump_stability_tc_FF = [];
     
     f = figure('units','normalized','outerposition',[0 0 1 1]);
     smothed_bump_all_stims = [];
@@ -144,14 +149,19 @@ for d = 1:length( exp_directories )
         baseline_non_nan_deg_uw_FF = baseline_vals_deg_uw_FF(~isnan(baseline_vals_deg_uw_FF));        
         bump_delta_tc_deg_uw_FF = medfilt1( bump_in_deg_unwrapped_FF - mean(baseline_non_nan_deg_uw_FF), 4, 'truncate' );        
         % bump_delta_tc_deg_uw = bump_in_deg_unwrapped - mean(baseline_non_nan_deg_uw);
-
         
         stop_here = 0;
         
         % Check that none of the values in the prestim period are NaNs, and that the bump was stable        
         if( ( sum( isnan( pre_stim_bump_tc_uw ) ) == 0 ) && ( std( pre_stim_bump_tc_uw ) < PRE_STIM_BUMP_STABILITY_THRESHOLD  ) )
             passed_bump_stability_check(end+1) = st;
+
             passed_bump_stability_tc(end+1,:) = bump_delta_tc;
+            
+            bump_delta_tc_deg_uw_fixed_FF = bump_delta_tc_deg_uw_FF;
+            bump_delta_tc_deg_uw_fixed_FF = assess_and_fix_bump_quality( bump_delta_tc_deg_uw_FF, VPS );
+
+            passed_bump_stability_tc_FF(end+1,:) = bump_delta_tc_deg_uw_fixed_FF;
             
             subplot(1,2,1);
             hold on;
@@ -247,6 +257,7 @@ for d = 1:length( exp_directories )
     for st = 1:length( passed_bump_stability_check )
         cur_stim = passed_bump_stability_check( st );
         cur_bump_tc = passed_bump_stability_tc( st, : );          
+        cur_bump_tc_FF = passed_bump_stability_tc_FF( st, : );          
 
 %         if( cur_stim == 12 )
 %             debug_cnt = debug_cnt + 1;
@@ -333,14 +344,18 @@ for d = 1:length( exp_directories )
                 subplot(4,1,1);
                 hold on;
                 
-                returned_up_tc(end+1,:) = cur_bump_tc;       
+                returned_up_tc(end+1,:) = cur_bump_tc;      
+                returned_up_tc_FF(end+1,:) = cur_bump_tc_FF;      
+                
                 returned_up_ids(end+1) = cur_stim; 
                 returned_up_time_idx{end+1} = [ jump_lookahead_window(end) : returned_time_idx ];
             elseif( ( abs(cur_mean_bump_jump) > JUMP_THRESHOLD ) && (bump_returns_flag == 1) && ( bump_return_direction < 0 ))
                 subplot(4,1,2);
                 hold on;
                 
-                returned_down_tc(end+1,:) = cur_bump_tc;       
+                returned_down_tc(end+1,:) = cur_bump_tc;                                      
+                returned_down_tc_FF(end+1,:) = cur_bump_tc_FF;                                      
+                
                 returned_down_ids(end+1) = cur_stim; 
                 returned_down_time_idx{end+1} = [ jump_lookahead_window(end) : returned_time_idx ];
 
@@ -388,6 +403,9 @@ for d = 1:length( exp_directories )
     bump_returns_up{d,3} = returned_up_time_idx;
     
     no_bump_jump{d,1} = no_response_tc;
-    no_bump_jump{d,2} = no_response_ids;
+    no_bump_jump{d,2} = no_response_ids;    
 end
+  
+bump_tc_FF{ 1 } = returned_up_tc_FF;
+bump_tc_FF{ 2 } = returned_down_tc_FF;
 end
