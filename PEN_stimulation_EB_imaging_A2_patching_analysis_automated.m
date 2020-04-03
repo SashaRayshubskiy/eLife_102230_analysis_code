@@ -51,10 +51,20 @@ exp_directories = { { '181205_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_17', 0, 0.2, 0.
 % sid 0
 % datapath = '/data/drive2/sasha/190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04/';
 
-ctrl_directories = { { '181206_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_01', 0, 0.4, 0.5 }, ... 
-                     { '190208_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_02', 0, 0.4, 0.5 }, ... 
-                     { '190211_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_03', 1, 0.4, 0.5 }, ... 
-                     { '190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04', 0, 0.4, 0.5 } };
+ctrl_directories = { { '181206_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_01', 0, 0.4, 0.5, 0.5 }, ... 
+                     { '190208_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_02', 0, 0.4, 0.5, 0.5 }, ... 
+                     { '190211_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_03', 1, 0.4, 0.5, 0.5 }, ... 
+                     { '190212_Lex_6f_60D05_Gal4_P2X2_P2X2_recomb_04', 0, 0.4, 0.5, 0.5 } };
+                 
+excluded_flies = { {'181203_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_16', 0 }, ...
+                   {'181211_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_18', 1 }, ...
+                   {'190218_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_25', 0 }, ...
+                   {'190220_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_27', 1 }, ...
+                   {'190221_Lex_6f_60D05_Gal4_P2X2_PEN1_recomb_28', 1 } };
+
+%%
+examine_fly_activity( basedir, excluded_flies );             
+examine_fly_activity( basedir, exp_directories );             
 
 %%
 extract_key_variables( basedir, exp_directories );                 
@@ -78,8 +88,8 @@ RUN_EXPERIMENT = 55;
 RUN_CONTROL    = 56;
 RUN_TEST       = 57;
 
-ANALYSIS_TYPE = RUN_EXPERIMENT; experiment_type_str = 'experiment';
-% ANALYSIS_TYPE = RUN_CONTROL; experiment_type_str = 'control';
+% ANALYSIS_TYPE = RUN_EXPERIMENT; experiment_type_str = 'experiment';
+ANALYSIS_TYPE = RUN_CONTROL; experiment_type_str = 'control';
 % ANALYSIS_TYPE = RUN_TEST; experiment_type_str = 'test';
 
 if( ANALYSIS_TYPE == RUN_EXPERIMENT )
