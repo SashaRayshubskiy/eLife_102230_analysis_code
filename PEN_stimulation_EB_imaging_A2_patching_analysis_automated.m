@@ -88,8 +88,8 @@ RUN_EXPERIMENT = 55;
 RUN_CONTROL    = 56;
 RUN_TEST       = 57;
 
-% ANALYSIS_TYPE = RUN_EXPERIMENT; experiment_type_str = 'experiment';
-ANALYSIS_TYPE = RUN_CONTROL; experiment_type_str = 'control';
+ANALYSIS_TYPE = RUN_EXPERIMENT; experiment_type_str = 'experiment';
+% ANALYSIS_TYPE = RUN_CONTROL; experiment_type_str = 'control';
 % ANALYSIS_TYPE = RUN_TEST; experiment_type_str = 'test';
 
 if( ANALYSIS_TYPE == RUN_EXPERIMENT )
@@ -114,6 +114,19 @@ bump_conditions = { bump_returns_up, bump_returns_down };
 bump_conditions_str = { 'bump_returns_up', 'bump_returns_down' };
 
 [ bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, ephys_win_all ] = align_by_bump_velocity_with_PSTH( basedir, cur_dirs, bump_conditions, bump_conditions_str );
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+% This unit is to explore bump magnitude with subsequent turn
+%%%%%%%%%%%%%%%%%%%%%%%%%
+bump_conditions = { bump_returns_up, bump_returns_down };
+bump_conditions_str = { 'bump_returns_up', 'bump_returns_down' };
+
+[ bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, ephys_win_all, full_fwd, full_yaw, full_bump, full_ephys, full_yaw_t, full_ephys_t ] = align_by_bump_velocity_with_PSTH_with_full_trial_data( basedir, cur_dirs, bump_conditions, bump_conditions_str );
+
+examine_bump_turn_dynamics_NN( full_fwd, full_yaw, full_bump, full_ephys, full_yaw_t, full_ephys_t, yaw_win_all, timebase_yaw );
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Experimenting for figure
 bump_conditions = { bump_returns_up, bump_returns_down };
