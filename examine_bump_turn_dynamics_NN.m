@@ -84,6 +84,8 @@ end
 f = figure;
 
 scatter(bump_jumps, turn_post_bump_jump);
+xlabel('Bump jump (deg)');
+ylabel('Yaw post bump jump (deg/s)');
 
 saveas(f, [savepath 'bump_jump_vs_turn_velocity.fig']);
 saveas(f, [savepath 'bump_jump_vs_turn_velocity.png']);
@@ -121,7 +123,9 @@ for cond = [ 1 : size( full_bump, 1 ) ]
             if( cur_fwd_vel_in_stopping_win <= STOPPING_THRESHOLD )
                 stopping_event_cnt = stopping_event_cnt + 1;
                 
-                stop_durations(end+1) = compute_stop_duration( cur_fwd(:end), cur_bump_t(2)-cur_bump_t(1) );
+                % t=0 stim trigger
+                stopping_win = find( cur_bump_t >= 0 );
+                stop_durations(end+1) = compute_stop_duration( cur_fwd(stopping_win), cur_bump_t(2)-cur_bump_t(1), STOPPING_THRESHOLD );
                 
             end
             total_event_cnt = total_event_cnt + 1;
