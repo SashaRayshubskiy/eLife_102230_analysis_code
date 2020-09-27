@@ -122,9 +122,10 @@ bump_conditions_str = { 'bump_returns_up', 'bump_returns_down' };
 bump_conditions = { bump_returns_up, bump_returns_down };
 bump_conditions_str = { 'bump_returns_up', 'bump_returns_down' };
 
-[ bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, ephys_win_all, full_fwd, full_yaw, full_bump, full_ephys, full_yaw_t, full_ephys_t ] = align_by_bump_velocity_with_PSTH_with_full_trial_data( basedir, cur_dirs, bump_conditions, bump_conditions_str );
+[ bump_pos_win_all, bump_vel_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, ephys_win_all, full_fwd, full_yaw, full_bump, full_bump_t, full_ephys, full_yaw_t, full_ephys_t ] = align_by_bump_velocity_with_PSTH_with_full_trial_data( basedir, cur_dirs, bump_conditions, bump_conditions_str );
 
-examine_bump_turn_dynamics_NN( full_fwd, full_yaw, full_bump, full_ephys, full_yaw_t, full_ephys_t, yaw_win_all, timebase_yaw );
+%% Examine parameters that were asked by Nature Neuroscience reviewers
+examine_bump_turn_dynamics_NN( full_fwd, full_yaw, full_bump, full_bump_t, full_ephys, full_yaw_t, full_ephys_t, yaw_win_all, timebase_yaw );
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

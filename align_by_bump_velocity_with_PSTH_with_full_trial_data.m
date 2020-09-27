@@ -1,4 +1,4 @@
-function [ bump_pos_win_all, bump_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, ephys_win_all, full_fwd, full_yaw, full_bump, full_ephys, full_yaw_t, full_ephys_t ] =  ...
+function [ bump_pos_win_all, bump_win_all, yaw_win_all, fwd_win_all, Vm_win_all, PSTH_win_all, timebase_bump, timebase_yaw, timebase_ephys, ephys_win_all, full_fwd, full_yaw, full_bump, full_bump_t, full_ephys, full_yaw_t, full_ephys_t ] =  ...
     align_by_bump_velocity_with_PSTH_with_full_trial_data( basedir, directories, bump_conditions, bump_conditions_str )
 
 set( 0, 'DefaultFigureRenderer', 'painters' );
@@ -23,7 +23,7 @@ BUMP_CONDITION_UNDEFINED         = 38;
 
 DEBUG_VERBOSE                    = 77;
 DEBUG_OFF                        = 78;
-DEBUG_LEVEL                      = DEBUG_VERBOSE;
+DEBUG_LEVEL                      = DEBUG_OFF;
 
 TIME_BEFORE_EB_VEL_CHANGE        = 2.5; % Used to be 1.0 s
 TIME_AFTER_EB_VEL_CHANGE         = 2.0;
@@ -48,6 +48,7 @@ ephys_win_all          = cell( length(bump_conditions), length( directories ));
 full_fwd   = cell( length(bump_conditions), length( directories ));
 full_yaw   = cell( length(bump_conditions), length( directories ));
 full_bump  = cell( length(bump_conditions), length( directories ));
+full_bump_t  = cell( length(bump_conditions), length( directories ));
 full_ephys = cell( length(bump_conditions), length( directories ));
 full_yaw_t = cell( length(bump_conditions), length( directories ));
 full_ephys_t = cell( length(bump_conditions), length( directories ));
@@ -122,6 +123,7 @@ for cond = 1:length(bump_conditions)
         full_yaw_kept     = [];
         full_fwd_kept     = [];
         full_bump_kept    = [];
+        full_bump_t_kept    = [];
         full_ephys_kept   = [];
         full_yaw_t_kept   = [];
         full_ephys_t_kept = [];              
@@ -382,6 +384,7 @@ for cond = 1:length(bump_conditions)
             full_yaw_kept(end+1,:) = cur_yaw;
             full_fwd_kept(end+1,:) = cur_fwd;
             full_bump_kept(end+1,:) = cur_bump;
+            full_bump_t_kept(end+1,:) = t_bump_w;
             full_ephys_kept(end+1,:) = cur_ephys;
             full_yaw_t_kept(end+1,:) = t_yaw_w;
             full_ephys_t_kept(end+1,:) = t_ephys_w;
@@ -455,6 +458,7 @@ for cond = 1:length(bump_conditions)
         full_fwd{ cond, d }     = full_fwd_kept;
         full_yaw{ cond, d }     = full_yaw_kept;
         full_bump{ cond, d }    = full_bump_kept;
+        full_bump_t{ cond, d }    = full_bump_t_kept;
         full_ephys{ cond, d }   = full_ephys_kept; % or cur_ephys
         full_yaw_t{ cond, d }   = full_yaw_t_kept;
         full_ephys_t{ cond, d } = full_ephys_t_kept;
